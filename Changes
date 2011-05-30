@@ -1,0 +1,6 @@
+Revision history for Perl extension Pg::PQ.
+
+0.01  Mon May 30 16:54:48 2011
+	- original version; created by h2xs 1.23 with options
+		-An Pg::PQ
+
