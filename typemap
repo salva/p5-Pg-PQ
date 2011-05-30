@@ -1,0 +1,22 @@
+TYPEMAP
+
+PostgresPollingStatusType   T_MY_ENUM
+ConnStatusType              T_MY_ENUM
+PGTransactionStatusType     T_MY_ENUM
+
+PGconn *                    T_PGCONN
+
+
+
+INPUT
+T_PGCONN
+        $var = INT2PTR($type, SvIV((SV*)SvRV($arg)));
+
+T_MY_ENUM
+        $var = SvIV($arg);        
+
+OUTPUT
+T_PGCONN
+        sv_setref_pv($arg, \"Pg::PQ::Conn\", (void*)$var);
+T_MY_ENUM
+        $arg = ${ntype}2sv($var);

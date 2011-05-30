@@ -1,17 +1,22 @@
-use 5.010001;
+
 use ExtUtils::MakeMaker;
-# See lib/ExtUtils/MakeMaker.pm for details of how to influence
-# the contents of the Makefile that is written.
-WriteMakefile(
-    NAME              => 'Pg::PQ',
-    VERSION_FROM      => 'lib/Pg/PQ.pm', # finds $VERSION
-    PREREQ_PM         => {}, # e.g., Module::Name => 1.1
-    ($] >= 5.005 ?     ## Add these new keywords supported since 5.005
-      (ABSTRACT_FROM  => 'lib/Pg/PQ.pm', # retrieve abstract from module
-       AUTHOR         => 'Salvador Fandino <salva@>') : ()),
-    LIBS              => [''], # e.g., '-lm'
-    DEFINE            => '', # e.g., '-DHAVE_SOMETHING'
-    INC               => '-I.', # e.g., '-I. -I/usr/include/other'
-	# Un-comment this if you add C files to link with later:
-    # OBJECT            => '$(O_FILES)', # link all the C files too
-);
+
+`pg_config --version` =~ /PostgreSQL\s+(\d+)\.(\d+\.\d+)/i;
+unless (defined $1 and $1 >= 8) {
+    die "libpq 8.x.x or later required ($1.$2 found)\n";
+}
+
+my $incdir = `pg_config --includedir`;
+my $libdir = `pg_config --libdir`;
+chomp($incdir, $libdir);
+
+WriteMakefile( NAME          => 'Pg::PQ',
+               VERSION_FROM  => 'lib/Pg/PQ.pm',
+               PREREQ_PM     => {},
+               ABSTRACT_FROM => 'lib/Pg/PQ.pm',
+               AUTHOR        => 'Salvador Fandino <sfandino@yahoo.com>',
+               LIBS          => ["-lpq -L$libdir"],
+               DEFINE        => '', # e.g., '-DHAVE_SOMETHING'
+               INC           => "-I. -I$incdir",
+               # OBJECT        => '$(O_FILES)', # link all the C files too
+             );
