@@ -3,20 +3,55 @@ TYPEMAP
 PostgresPollingStatusType   T_MY_ENUM
 ConnStatusType              T_MY_ENUM
 PGTransactionStatusType     T_MY_ENUM
+ExecStatusType              T_MY_ENUM
 
 PGconn *                    T_PGCONN
+PGresult *                  T_PGRESULT
+PGcancel *                  T_PGCANCEL
+PGnotify *                  T_PGNOTIFY
 
+Oid                         T_UV
 
+char *                      T_UTF8
 
 INPUT
 T_PGCONN
         $var = INT2PTR($type, SvIV((SV*)SvRV($arg)));
+        if (!$var) Perl_croak(aTHX_ \"Null pointer error\");
+
+T_PGRESULT
+        $var = INT2PTR($type, SvIV((SV*)SvRV($arg)));
+        if (!$var) Perl_croak(aTHX_ \"Null pointer error\");
+
+T_PGCANCEL
+        $var = INT2PTR($type, SvIV((SV*)SvRV($arg)));
+        if (!$var) Perl_croak(aTHX_ \"Null pointer error\");
+
+T_PGNOTIFY
+        $var = INT2PTR($type, SvIV((SV*)SvRV($arg)));
+        if (!$var) Perl_croak(aTHX_ \"Null pointer error\");
 
 T_MY_ENUM
         $var = SvIV($arg);        
 
+T_UTF8
+        $var = SvPVutf8_nolen($arg);
+
 OUTPUT
 T_PGCONN
         sv_setref_pv($arg, \"Pg::PQ::Conn\", (void*)$var);
+
+T_PGRESULT
+        sv_setref_pv($arg, \"Pg::PQ::Result\", (void*)$var);
+
+T_PGCANCEL
+        sv_setref_pv($arg, \"Pg::PQ::Cancel\", (void*)$var);
+
+T_PGNOTIFY
+        sv_setref_pv($arg, \"Pg::PQ::Notify\", (void*)$var);
+
 T_MY_ENUM
         $arg = ${ntype}2sv($var);
+
+T_UTF8
+        $arg = newSVpvn_utf8($var, strlen($var), 1);

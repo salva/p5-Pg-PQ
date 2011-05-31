@@ -21,7 +21,7 @@ while(<E>) {
     elsif (/^\s*((?:P[QG]|CONN)\w+)\s*=\s*(\d+),/) {
         $c->[$2] = $1;
 
-        $last = $2;
+        $last = $2 + 1;
     }
     elsif (/^\s*((?:P[QG]|CONN)\w+)\s*,/) {
         $c->[$last++] = $1;
@@ -61,7 +61,7 @@ for my $enum (sort keys %enum) {
 	if (defined $name) {
 	    $value = $name;
             unless (defined $c->[0]) {
-                $c->[0] = "$ix - $value"
+                $c->[0] = "$value - $ix"
             }
 	}
 	else {

@@ -1,44 +1,45 @@
 package Pg::PQ;
 
+our $VERSION = '0.01';
+
 use 5.010001;
 use strict;
 use warnings;
 
-require Exporter;
+use Exporter qw(import);
 
-our @ISA = qw(Exporter);
-
-# Items to export into callers namespace by default. Note: do not export
-# names by default without a very good reason. Use EXPORT_OK instead.
-# Do not simply export all your public functions/methods/constants.
-
-# This allows declaration	use Pg::PQ ':all';
-# If you do not need this, moving things directly into @EXPORT or @EXPORT_OK
-# will save memory.
-our %EXPORT_TAGS = ( 'all' => [ qw(
-	
-) ] );
-
-our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
-
-our @EXPORT = qw(
-	
-);
-
-our $VERSION = '0.01';
+our @EXPORT_OK = ();
 
 require XSLoader;
 XSLoader::load('Pg::PQ', $VERSION);
 
-# Preloaded methods go here.
+package Pg::PQ::Conn;
+use Carp;
+
+sub new {
+    my $class = shift;
+    connectdb(@_);
+}
+
+sub start {
+    my $class = shift;
+    connectStart(@_);
+}
+
+sub DESTROY {
+    my $self = shift;
+    $self->finish if $$self;
+}
+
+sub getssl { croak "Pg::PQ::Conn::getssl not implemented" }
 
 1;
+
 __END__
-# Below is stub documentation for your module. You'd better edit it!
 
 =head1 NAME
 
-Pg::PQ - Perl extension for blah blah blah
+Pg::PQ - Perl wrapper for PostgreSQL libpq
 
 =head1 SYNOPSIS
 
@@ -47,17 +48,97 @@ Pg::PQ - Perl extension for blah blah blah
 
 =head1 DESCRIPTION
 
-Stub documentation for Pg::PQ, created by h2xs. It looks like the
-author of the extension was negligent enough to leave the stub
-unedited.
+=head2 Pg::PQ::Conn
 
-Blah blah blah.
+=over 4
 
-=head2 EXPORT
+=item $dbc = Pg::PQ::Conn->new($conninfo)
 
-None by default.
+wrapper method for libpq PQconnectdb
+
+=item $dbc = Pg::PQ::Conn->start($conninfo)
+
+wrapper method for libpq PQconnectStart
+
+=item $dbc->db
+
+=item $dbc->user
+
+=item $dbc->pass
+
+=item $dbc->host
+
+=item $dbc->port
+
+=item $dbc->options
+
+=item $dbc->status
+
+=item $dbc->transactionStatus
+
+=item $dbc->parameterStatus
+
+=item $dbc->protocolVersion
+
+=item $dbc->serverVersion
+
+=item $dbc->errorMessage
+
+=item $dbc->socket
+
+=item $dbc->backendPID
+
+=item $dbc->connectionNeedsPassword
+
+=item $dbc->connectionUsedPassword
+
+=item $dbc->finish
+
+=item $dbc->reset
+
+=item $dbc->resetStart
+
+=item $dbc->resetPoll
+
+=item $dbc->trace
+
+=item $dbc->untrace
+
+=item $dbc->exec
+
+=item $dbc->prepare
+
+=item $dbc->execPrepared
+
+=item $dbc->getCancel
+
+=item $dbc->notifies
+
+=item $dbc->makeEmptyResult
+
+=item $dbc->escapeString
+
+=item $dbc->sendQuery
+
+=item $dbc->getResult
+
+=item $dbc->consumeInput
+
+=item $dbc->isBusy
+
+=item $dbc->setnonblocking
+
+=item $dbc->isnonblocking
+
+=item $dbc->flush
 
 
+
+
+
+
+
+=back
 
 =head1 SEE ALSO
 

@@ -32,7 +32,7 @@ enum ConnStatusType {
 								 * backend startup. */
 	CONNECTION_SETENV,			/* Negotiating environment. */
 	CONNECTION_SSL_STARTUP,		/* Negotiating SSL. */
-	CONNECTION_NEEDED			/* Internal state: connect() needed */
+	CONNECTION_NEEDED,			/* Internal state: connect() needed */
 }
 
 enum PostgresPollingStatusType {
@@ -40,7 +40,7 @@ enum PostgresPollingStatusType {
 	PGRES_POLLING_READING,		/* These two indicate that one may	  */
 	PGRES_POLLING_WRITING,		/* use select before polling again.   */
 	PGRES_POLLING_OK,
-	PGRES_POLLING_ACTIVE		/* unused; keep for awhile for backwards
+	PGRES_POLLING_ACTIVE,		/* unused; keep for awhile for backwards
 								 * compatibility */
 };
 
@@ -57,7 +57,7 @@ enum  ExecStatusType {
 	PGRES_BAD_RESPONSE,			/* an unexpected response was recv'd from the
 								 * backend */
 	PGRES_NONFATAL_ERROR,		/* notice or warning message */
-	PGRES_FATAL_ERROR			/* query failed */
+	PGRES_FATAL_ERROR,			/* query failed */
 };
 
 enum PGTransactionStatusType {
@@ -65,13 +65,13 @@ enum PGTransactionStatusType {
 	PQTRANS_ACTIVE,				/* command in progress */
 	PQTRANS_INTRANS,			/* idle, within transaction block */
 	PQTRANS_INERROR,			/* idle, within failed transaction */
-	PQTRANS_UNKNOWN				/* cannot determine status */
+	PQTRANS_UNKNOWN,				/* cannot determine status */
 };
 
-typedef enum PGVerbosity {
+enum PGVerbosity {
 	PQERRORS_TERSE,				/* single-line error messages */
 	PQERRORS_DEFAULT,			/* recommended style */
-	PQERRORS_VERBOSE			/* all the facts, ma'am */
+	PQERRORS_VERBOSE,			/* all the facts, ma'am */
 } 
 
 #endif

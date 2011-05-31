@@ -1,15 +1,72 @@
-# Before `make install' is performed this script should be runnable with
-# `make test'. After `make install' it should work as `perl Pg-PQ.t'
+#!/usr/bin/perl
 
-#########################
+use 5.010;
 
-# change 'tests => 1' to 'tests => last_test_to_print';
+use strict;
+use warnings;
+
+
+use Pg::PQ;
+
+
+my ($dbr, $dbc);
+
+sub print_status {
+    # no warnings 'uninitialized';
+    printf("conn status:\t'%s' (%d),\terr:\t'%s'\nresult status:\t'%s' (%d),\tmsg:\t'%s',\terr:\t'%s'\n",
+           $dbc->status, $dbc->status, $dbc->errorMessage,
+           $dbr->status, $dbr->status, $dbr->statusString, $dbr->errorMessage);
+}
+
+$dbc = Pg::PQ::Conn->new("dbname=pgpqtest");
+say $dbc->status;
+say $dbc->db;
+
+$dbr = $dbc->exec("drop table foo");
+print_status;
+
+$dbr = $dbc->exec("drop table bar");
+print_status;
+
+$dbr = $dbc->exec("create table foo (id int)");
+print_status;
+
+$dbr = $dbc->exec('insert into foo (id) values ($1)', 8378);
+print_status;
+
+$dbr = $dbc->prepare(sth1 => 'insert into foo (id) values ($1)');
+print_status;
+
+$dbr = $dbc->execPrepared(sth1 => 11);
+print_status;
+
+$dbr = $dbc->execPrepared(sth1 => 12);
+print_status;
+
+$dbr = $dbc->execPrepared(sth1 => 13);
+print_status;
+
+$dbr = $dbc->execPrepared(sth1 => 14);
+print_status;
+
+$dbr = $dbc->prepare(sth2 => 'select id, id * id from foo where id > $1');
+print_status;
+
+$dbr = $dbc->execPrepared(sth2 => 12);
+print_status;
+
+if ($dbr->status == Pg::PQ::Constant::PGRES_TUPLES_OK()) {
+    say "ntuples: ", $dbr->ntuples;
+    say "nfields: ", $dbr->nfields;
+    say "id column number: ", $dbr->fnumber("id");
+    for my $row (0 .. $dbr->nTuples - 1) {
+        for my $col (0 .. $dbr->nFields - 1) {
+            print "\t", $dbr->value($row, $col);
+        }
+        print "\n";
+    }
+}
 
 use Test::More tests => 1;
-BEGIN { use_ok('Pg::PQ') };
-
-#########################
-
-# Insert your test code below, the Test::More module is use()ed here so read
-# its man page ( perldoc Test::More ) for help writing this test script.
+ok(1);
 
