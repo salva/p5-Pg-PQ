@@ -7,6 +7,7 @@ open E, "< enums.decl" or die "unable to open enums.h";
 open O, "> enums.h" or die "unable to open enums.c";
 
 my %enum;
+my %tag;
 my @s;
 my $c;
 my $last = 0;
@@ -14,10 +15,11 @@ while(<E>) {
     s|/\*.*/||;
     s|^\s\* .*||;
     s|^.*\*/||;
-    if (my ($name) = /^enum\s*(\w+)\s*/) {
+    if (my ($name, $tag) = /^enum\s*(\w+)\s*(?:=>\s*(\w))?/) {
         $last = 0;
 	# $name =~ s/^ldap_//;
 	$c = $enum{$name} = [];
+        $tag{$name} = $tag;
     }
     elsif (/^\s*((?:P[QG]|CONN)\w+)\s*=\s*(\d+),/) {
         $c->[$2] = $1;
@@ -62,6 +64,16 @@ INIT
 
 for my $enum (sort keys %enum) {
     my $c = $enum{$enum};
+    my $tag = $tag{$enum};
+
+    if (defined $tag and length $tag) {
+        $tag = qq("$tag");
+    }
+    else {
+        $tag = 'NULL';
+    }
+
+
     for my $ix (0..$#$c) {
 	my $name = $c->[$ix];
 	my $value;
@@ -81,8 +93,8 @@ for my $enum (sort keys %enum) {
             $name =~ s/^$f/$t/;
         }
 
-	printf O <<C, $ix, $name, length($name), $value;
-    enum2sv_${enum}[%d] = make_constant("%s", %d, %s);
+	printf O <<C, $ix, $name, length($name), $value, $tag;
+    enum2sv_${enum}[%d] = make_constant("%s", %d, %s, %s);
 C
 
     }
