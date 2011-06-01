@@ -127,6 +127,16 @@ int PQresetStart(PGconn *conn);
 
 PostgresPollingStatusType PQresetPoll(PGconn *conn);
 
+const char *PQclientEncoding(PGconn *conn)
+CODE:
+    RETVAL = pg_encoding_to_char(PQclientEncoding(conn));
+OUTPUT:
+    RETVAL
+
+int PQsetClientEncoding(PGconn *conn, const char *encoding);
+
+PGVerbosity PQsetErrorVerbosity(PGconn *conn, PGVerbosity verbosity);
+
 void PQtrace(PGconn *conn, FILE *stream);
 
 void PQuntrace(PGconn *conn);
@@ -229,14 +239,14 @@ OUTPUT:
 int PQsendQuery(PGconn *conn, const char *command, ...)
 CODE:
     if (items <= 2) {
-        RETVAL = PQsend(conn, command);
+        RETVAL = PQsendQuery(conn, command);
     }
     else {
         int n = items - 2, i;
         char **values;
         Newx(values, n, char *);
         for (i = 0; i < n; i++) values[i] = SvPV_nolen(ST(i + 2));
-        RETVAL = PQsendParams(conn, command, n, NULL, (const char **)values, NULL, NULL, 0);
+        RETVAL = PQsendQueryParams(conn, command, n, NULL, (const char **)values, NULL, NULL, 0);
         Safefree(values);
     }
 OUTPUT:
@@ -257,7 +267,7 @@ PREINIT:
 CODE:
     Newx(values, n, char *);
     for (i = 0; i < n; i++) values[i] = SvPV_nolen(ST(i + 2));
-    RETVAL = PQsendPrepared(conn, stmtName, n, (const char **)values, NULL, NULL, 0);
+    RETVAL = PQsendQueryPrepared(conn, stmtName, n, (const char **)values, NULL, NULL, 0);
     Safefree(values);
 OUTPUT:
     RETVAL

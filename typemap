@@ -4,11 +4,11 @@ PostgresPollingStatusType   T_MY_ENUM
 ConnStatusType              T_MY_ENUM
 PGTransactionStatusType     T_MY_ENUM
 ExecStatusType              T_MY_ENUM
+PGVerbosity                 T_MY_ENUM
 
 PGconn *                    T_PGCONN
 PGresult *                  T_PGRESULT
 PGcancel *                  T_PGCANCEL
-PGnotify *                  T_PGNOTIFY
 
 Oid                         T_UV
 
@@ -27,9 +27,6 @@ T_PGCANCEL
         $var = INT2PTR($type, SvIV((SV*)SvRV($arg)));
         if (!$var) Perl_croak(aTHX_ \"Null pointer error\");
 
-T_PGNOTIFY
-        $var = INT2PTR($type, SvIV((SV*)SvRV($arg)));
-        if (!$var) Perl_croak(aTHX_ \"Null pointer error\");
 
 T_MY_ENUM
         $var = SvIV($arg);        
@@ -39,16 +36,22 @@ T_UTF8
 
 OUTPUT
 T_PGCONN
-        sv_setref_pv($arg, \"Pg::PQ::Conn\", (void*)$var);
+        if ($var)
+            sv_setref_pv($arg, \"Pg::PQ::Conn\", (void*)$var);
+        else
+            sv_setsv($arg, &PL_sv_undef);
 
 T_PGRESULT
-        sv_setref_pv($arg, \"Pg::PQ::Result\", (void*)$var);
+        if ($var)
+            sv_setref_pv($arg, \"Pg::PQ::Result\", (void*)$var);
+        else
+            sv_setsv($arg, &PL_sv_undef);
 
 T_PGCANCEL
-        sv_setref_pv($arg, \"Pg::PQ::Cancel\", (void*)$var);
-
-T_PGNOTIFY
-        sv_setref_pv($arg, \"Pg::PQ::Notify\", (void*)$var);
+        if ($var)
+            sv_setref_pv($arg, \"Pg::PQ::Cancel\", (void*)$var);
+        else
+            sv_setsv($arg, &PL_sv_undef);
 
 T_MY_ENUM
         $arg = ${ntype}2sv($var);
