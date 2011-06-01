@@ -3,10 +3,11 @@
 use strict;
 use warnings;
 
-open E, "< enums.h" or die "unable to open enums.h";
-open O, "> enums.c" or die "unable to open enums.c";
+open E, "< enums.decl" or die "unable to open enums.h";
+open O, "> enums.h" or die "unable to open enums.c";
 
 my %enum;
+my @s;
 my $c;
 my $last = 0;
 while(<E>) {
@@ -26,7 +27,13 @@ while(<E>) {
     elsif (/^\s*((?:P[QG]|CONN)\w+)\s*,/) {
         $c->[$last++] = $1;
     }
+    elsif (m|^\s*s/(\w+)/(\w*)/|) {
+        push @s, [$1, $2];
+    }
 }
+
+@s = sort { length($b->[0]) <=> length($a->[0]) } @s;
+# use Data::Dumper; print Dumper \@s;
 
 print O <<HEAD;
 /*
@@ -68,6 +75,11 @@ for my $enum (sort keys %enum) {
 	    $name = uc "${enum}_$ix";
 	    $value = $ix;
 	}
+
+        for my $s (@s) {
+            my ($f, $t) = @$s;
+            $name =~ s/^$f/$t/;
+        }
 
 	printf O <<C, $ix, $name, length($name), $value;
     enum2sv_${enum}[%d] = make_constant("%s", %d, %s);

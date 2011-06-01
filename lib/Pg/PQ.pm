@@ -33,6 +33,13 @@ sub DESTROY {
 
 sub getssl { croak "Pg::PQ::Conn::getssl not implemented" }
 
+package Pg::PQ::Result;
+
+sub DESTROY {
+    my $self = shift;
+    $self->clear if $$self;
+}
+
 1;
 
 __END__

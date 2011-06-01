@@ -49,7 +49,7 @@ print_status;
 $dbr = $dbc->execPrepared(sth1 => 14);
 print_status;
 
-$dbr = $dbc->prepare(sth2 => 'select id, id * id from foo where id > $1');
+$dbr = $dbc->prepare(sth2 => 'select id, id * id from foo where id > $1 order by id');
 print_status;
 
 $dbr = $dbc->execPrepared(sth2 => 12);

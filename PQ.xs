@@ -143,15 +143,10 @@ OUTPUT:
     RETVAL
 
 
-
 # PGresult *PQprepare(PGconn *conn, const char *stmtName, const char *query, int nParams, const Oid *paramTypes);
 
 PGresult *PQprepare(PGconn *conn, const char *stmtName, const char *query)
-CODE:
-    RETVAL = PQprepare(conn, stmtName, query, 0, NULL);
-OUTPUT:
-    RETVAL
-
+C_ARGS: conn, stmtName, query, 0, NULL
 
 # PGresult *PQexecPrepared(PGconn *conn, const char *stmtName, int nParams, const char * const *paramValues, const int *paramLengths, const int *paramFormats, int resultFormat);
 
@@ -196,13 +191,47 @@ OUTPUT:
 
 # unsigned char *PQescapeByteaConn(PGconn *conn, unsigned char *from, size_t from_length, size_t *to_length);
 
-int PQsendQuery(PGconn *conn, const char *command);
+# int PQsendQuery(PGconn *conn, const char *command);
 
 # int PQsendQueryParams(PGconn *conn, const char *command, int nParams, const Oid *paramTypes, const char * const *paramValues, const int *paramLengths, const int *paramFormats, int resultFormat);
 
+int PQsend(PGconn *conn, const char *command, ...)
+CODE:
+    if (items <= 2) {
+        RETVAL = PQsend(conn, command);
+    }
+    else {
+        int n = items - 2, i;
+        char **values;
+        Newx(values, n, char *);
+        for (i = 0; i < n; i++) values[i] = SvPV_nolen(ST(i + 2));
+        RETVAL = PQsendParams(conn, command, n, NULL, (const char **)values, NULL, NULL, 0);
+        Safefree(values);
+    }
+OUTPUT:
+    RETVAL
+
+
 # int PQsendPrepare(PGconn *conn, const char *stmtName, const char *query, int nParams, const Oid *paramTypes);
 
+int PQsendPrepare(PGconn *conn, const char *stmtName, const char *query)
+C_ARGS: conn, stmtName, query, 0, NULL
+
 # int PQsendQueryPrepared(PGconn *conn, char *stmtName, int nParams, const char * const *paramValues, const int *paramLengths, const int *paramFormats, int resultFormat);
+
+int PQsendQueryPrepared(PGconn *conn, const char *stmtName, ...)
+ALIAS:
+    sendPrepared = 0
+PREINIT:
+    int n = items - 2, i;
+    char **values;
+CODE:
+    Newx(values, n, char *);
+    for (i = 0; i < n; i++) values[i] = SvPV_nolen(ST(i + 2));
+    RETVAL = PQsendPrepared(conn, stmtName, n, (const char **)values, NULL, NULL, 0);
+    Safefree(values);
+OUTPUT:
+    RETVAL
 
 PGresult *PQgetResult(PGconn *conn);
 
@@ -238,9 +267,6 @@ CLEANUP:
 char *PQresultErrorField(PGresult *res, int fieldcode);
 ALIAS:
     errorField = 0
-
-
-MODULE = Pg::PQ		PACKAGE = Pg::PQ::Result          PREFIX=PQ
 
 void PQclear(PGresult *res)
 POSTCALL:
@@ -295,13 +321,12 @@ ALIAS:
 
 # void PQprint(FILE *fout, PGresult *res, PQprintOpt *po);
 
-
-
 char *PQcmdStatus(PGresult *res);
 
 char *PQcmdTuples(PGresult *res);
 
 Oid PQoidValue(PGresult *res);
+
 
 MODULE = Pg::PQ		PACKAGE = Pg::PQ::Cancel          PREFIX=PQ
 
