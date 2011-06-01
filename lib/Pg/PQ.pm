@@ -6,12 +6,14 @@ use 5.010001;
 use strict;
 use warnings;
 
-use Exporter qw(import);
-
-our @EXPORT_OK = ();
-
 require XSLoader;
 XSLoader::load('Pg::PQ', $VERSION);
+
+use Exporter qw(import);
+
+our %EXPORT_TAGS;
+our @EXPORT_OK = map @$_, values %EXPORT_TAGS;
+$EXPORT_TAGS{all} = [@EXPORT_OK];
 
 package Pg::PQ::Conn;
 use Carp;
@@ -111,11 +113,11 @@ wrapper method for libpq PQconnectStart
 
 =item $dbc->untrace
 
-=item $dbc->exec
+=item $dbc->execQuery
 
 =item $dbc->prepare
 
-=item $dbc->execPrepared
+=item $dbc->execQueryPrepared
 
 =item $dbc->getCancel
 
@@ -127,15 +129,15 @@ wrapper method for libpq PQconnectStart
 
 =item $dbc->sendQuery
 
-=item $dbc->getResult
+=item $dbc->sendQueryPrepared
+
+=item $dbc->result
 
 =item $dbc->consumeInput
 
-=item $dbc->isBusy
+=item $dbc->busy
 
-=item $dbc->setnonblocking
-
-=item $dbc->isnonblocking
+=item $dbc->nonBlocking
 
 =item $dbc->flush
 

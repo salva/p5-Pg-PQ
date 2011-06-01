@@ -5,9 +5,7 @@ use 5.010;
 use strict;
 use warnings;
 
-
-use Pg::PQ;
-
+use Pg::PQ qw(:all);
 
 my ($dbr, $dbc);
 
@@ -55,7 +53,7 @@ print_status;
 $dbr = $dbc->execPrepared(sth2 => 12);
 print_status;
 
-if ($dbr->status == Pg::PQ::Constant::PGRES_TUPLES_OK()) {
+if ($dbr->status == PGRES_TUPLES_OK()) {
     say "ntuples: ", $dbr->ntuples;
     say "nfields: ", $dbr->nfields;
     say "id column number: ", $dbr->fnumber("id");

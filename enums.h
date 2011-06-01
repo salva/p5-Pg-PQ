@@ -14,50 +14,50 @@ SV *enum2sv_PostgresPollingStatusType[5];
 
 static void
 init_constants(void) {
-    enum2sv_ConnStatusType[0] = make_constant("CONNECTION_OK", 13, CONNECTION_OK);
-    enum2sv_ConnStatusType[1] = make_constant("CONNECTION_BAD", 14, CONNECTION_BAD);
-    enum2sv_ConnStatusType[2] = make_constant("CONNECTION_STARTED", 18, CONNECTION_STARTED);
-    enum2sv_ConnStatusType[3] = make_constant("CONNECTION_MADE", 15, CONNECTION_MADE);
-    enum2sv_ConnStatusType[4] = make_constant("CONNECTION_AWAITING_RESPONSE", 28, CONNECTION_AWAITING_RESPONSE);
-    enum2sv_ConnStatusType[5] = make_constant("CONNECTION_AUTH_OK", 18, CONNECTION_AUTH_OK);
-    enum2sv_ConnStatusType[6] = make_constant("CONNECTION_SETENV", 17, CONNECTION_SETENV);
-    enum2sv_ConnStatusType[7] = make_constant("CONNECTION_SSL_STARTUP", 22, CONNECTION_SSL_STARTUP);
-    enum2sv_ConnStatusType[8] = make_constant("CONNECTION_NEEDED", 17, CONNECTION_NEEDED);
+    enum2sv_ConnStatusType[0] = make_constant("CONNECTION_OK", 13, CONNECTION_OK, "connection");
+    enum2sv_ConnStatusType[1] = make_constant("CONNECTION_BAD", 14, CONNECTION_BAD, "connection");
+    enum2sv_ConnStatusType[2] = make_constant("CONNECTION_STARTED", 18, CONNECTION_STARTED, "connection");
+    enum2sv_ConnStatusType[3] = make_constant("CONNECTION_MADE", 15, CONNECTION_MADE, "connection");
+    enum2sv_ConnStatusType[4] = make_constant("CONNECTION_AWAITING_RESPONSE", 28, CONNECTION_AWAITING_RESPONSE, "connection");
+    enum2sv_ConnStatusType[5] = make_constant("CONNECTION_AUTH_OK", 18, CONNECTION_AUTH_OK, "connection");
+    enum2sv_ConnStatusType[6] = make_constant("CONNECTION_SETENV", 17, CONNECTION_SETENV, "connection");
+    enum2sv_ConnStatusType[7] = make_constant("CONNECTION_SSL_STARTUP", 22, CONNECTION_SSL_STARTUP, "connection");
+    enum2sv_ConnStatusType[8] = make_constant("CONNECTION_NEEDED", 17, CONNECTION_NEEDED, "connection");
 
-    enum2sv_CopyResultFlag[0] = make_constant("PG_COPYRES_0", 12, 0);
-    enum2sv_CopyResultFlag[1] = make_constant("PG_COPYRES_ATTRS", 16, PG_COPYRES_ATTRS);
-    enum2sv_CopyResultFlag[2] = make_constant("PG_COPYRES_TUPLES", 17, PG_COPYRES_TUPLES);
-    enum2sv_CopyResultFlag[3] = make_constant("PG_COPYRES_3", 12, 3);
-    enum2sv_CopyResultFlag[4] = make_constant("PG_COPYRES_EVENTS", 17, PG_COPYRES_EVENTS);
-    enum2sv_CopyResultFlag[5] = make_constant("PG_COPYRES_5", 12, 5);
-    enum2sv_CopyResultFlag[6] = make_constant("PG_COPYRES_6", 12, 6);
-    enum2sv_CopyResultFlag[7] = make_constant("PG_COPYRES_7", 12, 7);
-    enum2sv_CopyResultFlag[8] = make_constant("PG_COPYRES_NOTICEHOOKS", 22, PG_COPYRES_NOTICEHOOKS);
+    enum2sv_CopyResultFlag[0] = make_constant("PG_COPYRES_0", 12, 0, "copyres");
+    enum2sv_CopyResultFlag[1] = make_constant("PG_COPYRES_ATTRS", 16, PG_COPYRES_ATTRS, "copyres");
+    enum2sv_CopyResultFlag[2] = make_constant("PG_COPYRES_TUPLES", 17, PG_COPYRES_TUPLES, "copyres");
+    enum2sv_CopyResultFlag[3] = make_constant("PG_COPYRES_3", 12, 3, "copyres");
+    enum2sv_CopyResultFlag[4] = make_constant("PG_COPYRES_EVENTS", 17, PG_COPYRES_EVENTS, "copyres");
+    enum2sv_CopyResultFlag[5] = make_constant("PG_COPYRES_5", 12, 5, "copyres");
+    enum2sv_CopyResultFlag[6] = make_constant("PG_COPYRES_6", 12, 6, "copyres");
+    enum2sv_CopyResultFlag[7] = make_constant("PG_COPYRES_7", 12, 7, "copyres");
+    enum2sv_CopyResultFlag[8] = make_constant("PG_COPYRES_NOTICEHOOKS", 22, PG_COPYRES_NOTICEHOOKS, "copyres");
 
-    enum2sv_ExecStatusType[0] = make_constant("PGRES_EMPTY_QUERY", 17, PGRES_EMPTY_QUERY);
-    enum2sv_ExecStatusType[1] = make_constant("PGRES_COMMAND_OK", 16, PGRES_COMMAND_OK);
-    enum2sv_ExecStatusType[2] = make_constant("PGRES_TUPLES_OK", 15, PGRES_TUPLES_OK);
-    enum2sv_ExecStatusType[3] = make_constant("PGRES_COPY_OUT", 14, PGRES_COPY_OUT);
-    enum2sv_ExecStatusType[4] = make_constant("PGRES_COPY_IN", 13, PGRES_COPY_IN);
-    enum2sv_ExecStatusType[5] = make_constant("PGRES_BAD_RESPONSE", 18, PGRES_BAD_RESPONSE);
-    enum2sv_ExecStatusType[6] = make_constant("PGRES_NONFATAL_ERROR", 20, PGRES_NONFATAL_ERROR);
-    enum2sv_ExecStatusType[7] = make_constant("PGRES_FATAL_ERROR", 17, PGRES_FATAL_ERROR);
+    enum2sv_ExecStatusType[0] = make_constant("PGRES_EMPTY_QUERY", 17, PGRES_EMPTY_QUERY, "pgres");
+    enum2sv_ExecStatusType[1] = make_constant("PGRES_COMMAND_OK", 16, PGRES_COMMAND_OK, "pgres");
+    enum2sv_ExecStatusType[2] = make_constant("PGRES_TUPLES_OK", 15, PGRES_TUPLES_OK, "pgres");
+    enum2sv_ExecStatusType[3] = make_constant("PGRES_COPY_OUT", 14, PGRES_COPY_OUT, "pgres");
+    enum2sv_ExecStatusType[4] = make_constant("PGRES_COPY_IN", 13, PGRES_COPY_IN, "pgres");
+    enum2sv_ExecStatusType[5] = make_constant("PGRES_BAD_RESPONSE", 18, PGRES_BAD_RESPONSE, "pgres");
+    enum2sv_ExecStatusType[6] = make_constant("PGRES_NONFATAL_ERROR", 20, PGRES_NONFATAL_ERROR, "pgres");
+    enum2sv_ExecStatusType[7] = make_constant("PGRES_FATAL_ERROR", 17, PGRES_FATAL_ERROR, "pgres");
 
-    enum2sv_PGTransactionStatusType[0] = make_constant("PQTRANS_IDLE", 12, PQTRANS_IDLE);
-    enum2sv_PGTransactionStatusType[1] = make_constant("PQTRANS_ACTIVE", 14, PQTRANS_ACTIVE);
-    enum2sv_PGTransactionStatusType[2] = make_constant("PQTRANS_INTRANS", 15, PQTRANS_INTRANS);
-    enum2sv_PGTransactionStatusType[3] = make_constant("PQTRANS_INERROR", 15, PQTRANS_INERROR);
-    enum2sv_PGTransactionStatusType[4] = make_constant("PQTRANS_UNKNOWN", 15, PQTRANS_UNKNOWN);
+    enum2sv_PGTransactionStatusType[0] = make_constant("PQTRANS_IDLE", 12, PQTRANS_IDLE, "pqtrans");
+    enum2sv_PGTransactionStatusType[1] = make_constant("PQTRANS_ACTIVE", 14, PQTRANS_ACTIVE, "pqtrans");
+    enum2sv_PGTransactionStatusType[2] = make_constant("PQTRANS_INTRANS", 15, PQTRANS_INTRANS, "pqtrans");
+    enum2sv_PGTransactionStatusType[3] = make_constant("PQTRANS_INERROR", 15, PQTRANS_INERROR, "pqtrans");
+    enum2sv_PGTransactionStatusType[4] = make_constant("PQTRANS_UNKNOWN", 15, PQTRANS_UNKNOWN, "pqtrans");
 
-    enum2sv_PGVerbosity[0] = make_constant("PQERRORS_TERSE", 14, PQERRORS_TERSE);
-    enum2sv_PGVerbosity[1] = make_constant("PQERRORS_DEFAULT", 16, PQERRORS_DEFAULT);
-    enum2sv_PGVerbosity[2] = make_constant("PQERRORS_VERBOSE", 16, PQERRORS_VERBOSE);
+    enum2sv_PGVerbosity[0] = make_constant("PQERRORS_TERSE", 14, PQERRORS_TERSE, "pqerrors");
+    enum2sv_PGVerbosity[1] = make_constant("PQERRORS_DEFAULT", 16, PQERRORS_DEFAULT, "pqerrors");
+    enum2sv_PGVerbosity[2] = make_constant("PQERRORS_VERBOSE", 16, PQERRORS_VERBOSE, "pqerrors");
 
-    enum2sv_PostgresPollingStatusType[0] = make_constant("PGRES_POLLING_FAILED", 20, PGRES_POLLING_FAILED);
-    enum2sv_PostgresPollingStatusType[1] = make_constant("PGRES_POLLING_READING", 21, PGRES_POLLING_READING);
-    enum2sv_PostgresPollingStatusType[2] = make_constant("PGRES_POLLING_WRITING", 21, PGRES_POLLING_WRITING);
-    enum2sv_PostgresPollingStatusType[3] = make_constant("PGRES_POLLING_OK", 16, PGRES_POLLING_OK);
-    enum2sv_PostgresPollingStatusType[4] = make_constant("PGRES_POLLING_ACTIVE", 20, PGRES_POLLING_ACTIVE);
+    enum2sv_PostgresPollingStatusType[0] = make_constant("PGRES_POLLING_FAILED", 20, PGRES_POLLING_FAILED, "pgres_polling");
+    enum2sv_PostgresPollingStatusType[1] = make_constant("PGRES_POLLING_READING", 21, PGRES_POLLING_READING, "pgres_polling");
+    enum2sv_PostgresPollingStatusType[2] = make_constant("PGRES_POLLING_WRITING", 21, PGRES_POLLING_WRITING, "pgres_polling");
+    enum2sv_PostgresPollingStatusType[3] = make_constant("PGRES_POLLING_OK", 16, PGRES_POLLING_OK, "pgres_polling");
+    enum2sv_PostgresPollingStatusType[4] = make_constant("PGRES_POLLING_ACTIVE", 20, PGRES_POLLING_ACTIVE, "pgres_polling");
 
 }
 static SV *

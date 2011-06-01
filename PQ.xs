@@ -33,7 +33,7 @@
 /* } */
 
 static SV *
-make_constant(char *name, STRLEN l, U32 value) {
+make_constant(char *name, STRLEN l, U32 value, char *tag) {
     SV *sv = newSV(0);
     SvUPGRADE(sv, SVt_PVIV);
     sv_setpvn(sv, name, l);
@@ -41,7 +41,16 @@ make_constant(char *name, STRLEN l, U32 value) {
     SvIsUV_on(sv);
     SvUV_set(sv, value);
     SvREADONLY_on(sv);
-    newCONSTSUB(gv_stashpv("Pg::PQ::Constant", 1), name, sv);
+    newCONSTSUB(gv_stashpv("Pg::PQ", 1), name, sv);
+    if (tag) {
+        HV *hv = get_hv("Pg::PQ::EXPORT_TAGS", TRUE);
+        SV **svp = hv_fetch(hv, tag, strlen(tag), 1);
+        if (!svp || !*svp)
+            Perl_croak(aTHX_ "internal error populating EXPORT_TAGS");
+        if (!SvOK(*svp) || !SvROK(*svp) || (SvTYPE(SvRV(*svp)) != SVt_PVAV))
+            sv_setsv(*svp, sv_2mortal(newRV_noinc((SV*)newAV())));
+        av_push((AV*)SvRV(*svp), newSVpv(name, 0));
+    }
     return sv;
 }
 
@@ -52,7 +61,7 @@ sv_chomp(SV *sv) {
 }
 
 
-#include "enums.c"
+#include "enums.h"
 
 
 MODULE = Pg::PQ		PACKAGE = Pg::PQ		PREFIX=PQ
@@ -127,6 +136,8 @@ void PQuntrace(PGconn *conn);
 # PGresult *PQexecParams(PGconn *conn, const char *command, int nParams, const Oid *paramTypes, const char * const *paramValues, const int *paramLengths, const int *paramFormats, int resultFormat);
 
 PGresult *PQexec(PGconn *conn, const char *command, ...)
+ALIAS:
+    execQuery = 0
 CODE:
     if (items <= 2) {
         RETVAL = PQexec(conn, command);
@@ -151,6 +162,8 @@ C_ARGS: conn, stmtName, query, 0, NULL
 # PGresult *PQexecPrepared(PGconn *conn, const char *stmtName, int nParams, const char * const *paramValues, const int *paramLengths, const int *paramFormats, int resultFormat);
 
 PGresult *PQexecPrepared(PGconn *conn, const char *stmtName, ...)
+ALIAS:
+    execQueryPrepared = 0
 PREINIT:
     int n = items - 2, i;
     char **values;
@@ -164,7 +177,25 @@ OUTPUT:
 
 PGcancel *PQgetCancel(PGconn *conn);
 
-PGnotify *PQnotifies(PGconn *conn);
+void PQnotifies(PGconn *conn)
+PREINIT:
+    PGnotify *notice;
+PPCODE:
+    notice = PQnotifies(conn);
+    if (notice) {
+        int pid = notice->be_pid;
+        SV *name = newSVpv(notice->relname, 0);
+        PQfreemem(notice);
+        mPUSHs(name);
+        if (GIMME_V == G_ARRAY) {
+            mPUSHi(pid);
+            XSRETURN(2);
+        }
+        else
+            XSRETURN(1);
+    }
+    else
+        XSRETURN(0);
 
 PGresult *PQmakeEmptyPGresult(PGconn *conn, ExecStatusType status);
 ALIAS:
@@ -195,7 +226,7 @@ OUTPUT:
 
 # int PQsendQueryParams(PGconn *conn, const char *command, int nParams, const Oid *paramTypes, const char * const *paramValues, const int *paramLengths, const int *paramFormats, int resultFormat);
 
-int PQsend(PGconn *conn, const char *command, ...)
+int PQsendQuery(PGconn *conn, const char *command, ...)
 CODE:
     if (items <= 2) {
         RETVAL = PQsend(conn, command);
@@ -220,8 +251,6 @@ C_ARGS: conn, stmtName, query, 0, NULL
 # int PQsendQueryPrepared(PGconn *conn, char *stmtName, int nParams, const char * const *paramValues, const int *paramLengths, const int *paramFormats, int resultFormat);
 
 int PQsendQueryPrepared(PGconn *conn, const char *stmtName, ...)
-ALIAS:
-    sendPrepared = 0
 PREINIT:
     int n = items - 2, i;
     char **values;
@@ -234,14 +263,24 @@ OUTPUT:
     RETVAL
 
 PGresult *PQgetResult(PGconn *conn);
+ALIAS:
+    result = 0
 
 int PQconsumeInput(PGconn *conn);
 
-int PQisBusy(PGconn *conn);
+int PQisBusy(PGconn *conn)
+ALIAS:
+    busy = 0
 
-int PQsetnonblocking(PGconn *conn, int arg);
+int PQsetnonblocking(PGconn *conn, int arg)
 
 int PQisnonblocking(PGconn *conn);
+
+int nonBlocking(PGconn *conn, SV *nb = &PL_sv_undef)
+CODE:
+    if (SvOK(nb))
+        PQsetnonblocking(conn, SvIV(nb));
+    RETVAL = PQisnonblocking(conn);
 
 int PQflush(PGconn *conn);
 
@@ -313,7 +352,7 @@ ALIAS:
 
 int PQgetisnull(PGresult *res, int row_number, int column_number);
 ALIAS:
-    isNull = 0
+    null = 0
 
 int PQgetlength(PGresult *res, int row_number, int column_number);
 ALIAS:

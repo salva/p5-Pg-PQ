@@ -15,7 +15,7 @@ while(<E>) {
     s|/\*.*/||;
     s|^\s\* .*||;
     s|^.*\*/||;
-    if (my ($name, $tag) = /^enum\s*(\w+)\s*(?:=>\s*(\w))?/) {
+    if (my ($name, $tag) = /^enum\s*(\w+)\s*(?:=>\s*(\w+))?/) {
         $last = 0;
 	# $name =~ s/^ldap_//;
 	$c = $enum{$name} = [];
