@@ -6,6 +6,7 @@ use strict;
 use warnings;
 
 use Pg::PQ qw(:all);
+use Data::Dumper;
 
 my ($dbr, $dbc);
 
@@ -18,6 +19,8 @@ sub print_status {
 
 $dbc = Pg::PQ::Conn->new("dbname=pgpqtest");
 say $dbc->status;
+say $dbc->errorMessage;
+
 say $dbc->db;
 
 $dbr = $dbc->exec("drop table foo");
@@ -54,6 +57,8 @@ $dbr = $dbc->execPrepared(sth2 => 12);
 print_status;
 
 if ($dbr->status == PGRES_TUPLES_OK()) {
+    my $rows = $dbr->rows;
+    my $columns = $dbr->columns;
     say "ntuples: ", $dbr->ntuples;
     say "nfields: ", $dbr->nfields;
     say "id column number: ", $dbr->fnumber("id");
@@ -63,6 +68,19 @@ if ($dbr->status == PGRES_TUPLES_OK()) {
         }
         print "\n";
     }
+
+    say "rows:";
+    for my $row (0..$rows-1) {
+        say join ", ", $dbr->row($row);
+    }
+    say "columns:";
+    for my $column (0..$columns-1) {
+        say join ", ", $dbr->column($column);
+    }
+    say "all rows:";
+    say Dumper [$dbr->rows];
+    say "all columns:";
+    say Dumper [$dbr->columns];
 }
 
 use Test::More tests => 1;

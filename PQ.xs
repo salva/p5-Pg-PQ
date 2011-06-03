@@ -324,10 +324,12 @@ POSTCALL:
 int PQntuples(PGresult *res)
 ALIAS:
     nTuples = 0
+    nRows   = 1
 
 int PQnfields(PGresult *res)
 ALIAS:
-    nFields = 0
+    nFields  = 0
+    nColumns = 1
 
 char *PQfname(PGresult *res, int column_number)
 ALIAS:
@@ -352,13 +354,134 @@ Oid PQftype(PGresult *res, int column_number);
 int PQfmod(PGresult *res, int column_number);
 
 int PQfsize(PGresult *res, int column_number);
+ALIAS:
+    fSize = 0
 
 int PQbinaryTuples(PGresult *res);
 
 # TODO: handle data in binary format
-char *PQgetvalue(PGresult *res, int row_number, int column_number);
+SV *PQgetvalue(PGresult *res, int row_number, int column_number);
 ALIAS:
     value = 0
+PREINIT:
+    char *pv;
+CODE:
+    pv = PQgetvalue(res, row_number, column_number);
+    if (pv)
+        RETVAL = newSVpvn(pv, PQgetlength(res, row_number, column_number));
+    else
+        RETVAL = &PL_sv_undef;
+OUTPUT:
+    RETVAL
+
+void
+PQgettuple(PGresult *res, UV i = 0)
+ALIAS:
+    row = 0
+PREINIT:
+    int rows, cols, j;
+PPCODE:
+    rows = PQntuples(res);
+    cols = PQnfields(res);
+    if ((i > rows) || !cols)
+        XSRETURN(0);
+    else {
+        if (GIMME_V != G_ARRAY) cols = 1;
+        EXTEND(SP, cols);
+        for (j = 0; j < cols; j++) {
+            char *pv = PQgetvalue(res, i, j);
+            if (pv)
+                mPUSHs(newSVpvn(pv, PQgetlength(res, i, j)));
+            else
+                PUSHs(&PL_sv_undef);
+        }
+        XSRETURN(cols);
+    }
+
+void
+PQgetcolumn(PGresult *res, int j = 0)
+ALIAS:
+    column = 0
+PREINIT:
+    int rows, cols, i;
+PPCODE:
+    rows = PQntuples(res);
+    cols = PQnfields(res);
+    if ((j > cols) || !rows)
+        XSRETURN(0);
+    else {
+        if (GIMME_V != G_ARRAY) rows = 1;
+        EXTEND(SP, rows);
+        for (i = 0; i < rows; i++) {
+            char *pv = PQgetvalue(res, i, j);
+            if (pv)
+                mPUSHs(newSVpvn(pv, PQgetlength(res, i, j)));
+            else
+                PUSHs(&PL_sv_undef);
+        }
+        XSRETURN(rows);
+    }
+
+void
+PQgettuples(PGresult *res)
+ALIAS:
+    rows = 0
+PREINIT:
+    int rows, cols, i, j;
+PPCODE:
+    rows = PQntuples(res);
+    cols = PQnfields(res);
+    if (GIMME_V != G_ARRAY) {
+        mPUSHi(rows);
+        XSRETURN(1);
+    }
+    else {
+        EXTEND(SP, rows);
+        for (i = 0; i < rows; i++) {
+            AV *av = newAV();
+            mPUSHs(newRV_noinc((SV*)av));
+            if (cols) av_extend(av, cols - 1);
+            for (j = 0; j < cols; j++) {
+                char *pv = PQgetvalue(res, i, j);
+                if (pv)
+                    av_store(av, j, newSVpvn(pv, PQgetlength(res, i, j)));
+                else
+                    av_store(av, j, &PL_sv_undef);
+            }
+        }
+        XSRETURN(rows);
+    }
+
+void
+PQgetcolumns(PGresult *res)
+ALIAS:
+    columns = 0
+PREINIT:
+    int rows, cols, i, j;
+PPCODE:
+    rows = PQntuples(res);
+    cols = PQnfields(res);
+    if (GIMME_V != G_ARRAY) {
+        mPUSHi(cols);
+        XSRETURN(1);
+    }
+    else {
+        EXTEND(SP, rows);
+        for (j = 0; j < cols; j++) {
+            AV *av = newAV();
+            mPUSHs(newRV_noinc((SV*)av));
+            if (rows) av_extend(av, rows - 1);
+            for (i = 0; i < rows; i++) {
+                char *pv = PQgetvalue(res, i, j);
+                if (pv)
+                    av_store(av, i, newSVpvn(pv, PQgetlength(res, i, j)));
+                else
+                    av_store(av, i, &PL_sv_undef);
+            }
+        }
+        XSRETURN(cols);
+    }
+
 
 int PQgetisnull(PGresult *res, int row_number, int column_number);
 ALIAS:
@@ -366,7 +489,7 @@ ALIAS:
 
 int PQgetlength(PGresult *res, int row_number, int column_number);
 ALIAS:
-    length = 0
+    valueLength = 0
 
 # void PQprint(FILE *fout, PGresult *res, PQprintOpt *po);
 
