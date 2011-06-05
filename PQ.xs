@@ -169,6 +169,8 @@ OUTPUT:
 PGresult *PQprepare(PGconn *conn, const char *stmtName, const char *query)
 C_ARGS: conn, stmtName, query, 0, NULL
 
+PGresult *PQdescribePrepared(PGconn *conn, const char *stmtName);
+
 # PGresult *PQexecPrepared(PGconn *conn, const char *stmtName, int nParams, const char * const *paramValues, const int *paramLengths, const int *paramFormats, int resultFormat);
 
 PGresult *PQexecPrepared(PGconn *conn, const char *stmtName, ...)

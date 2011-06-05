@@ -52,12 +52,15 @@ Pg::PQ - Perl wrapper for PostgreSQL libpq
 
 =head1 SYNOPSIS
 
-  use Pg::PQ;
-  blah blah blah
+  use Pg::PQ qw(:);
+  my $dbc = Pg::PQ::Conn->new("dbname=test host=dbserver");
+  $dbc->status 
 
 =head1 DESCRIPTION
 
-=head2 Pg::PQ::Conn
+=head2 Pg::PQ::Conn class
+
+These are the methods available from the class Pg::PQ::Conn:
 
 =over 4
 
@@ -83,30 +86,50 @@ sockets, the default is to connect to localhost.
 =item hostaddr
 
 Numeric IP address of host to connect to. This should be in the
-standard IPv4 address format, e.g., 172.28.40.9. If your machine
+standard IPv4 address format, e.g., C<172.28.40.9>. If your machine
 supports IPv6, you can also use those addresses. TCP/IP communication
 is always used when a nonempty string is specified for this parameter.
 
-Using hostaddr instead of host allows the application to avoid a host
-name look-up, which might be important in applications with time
+Using C<hostaddr> instead of C<host> allows the application to avoid a
+host name look-up, which might be important in applications with time
 constraints. However, a host name is required for Kerberos, GSSAPI, or
 SSPI authentication, as well as for full SSL certificate
-verification. The following rules are used: If host is specified
-without hostaddr, a host name lookup occurs. If hostaddr is specified
-without host, the value for hostaddr gives the server address. The
-connection attempt will fail in any of the cases where a host name is
-required. If both host and hostaddr are specified, the value for
-hostaddr gives the server address. The value for host is ignored
+verification.
+
+The following rules are used:
+
+=over 4
+
+=item *
+
+If C<host> is specified without C<hostaddr>, a host name lookup
+occurs.
+
+=item *
+
+If C<hostaddr> is specified without C<host>, the value for C<hostaddr>
+gives the server address. The connection attempt will fail in any of
+the cases where a host name is required.
+
+=item *
+
+If both C<host> and C<hostaddr> are specified, the value for
+C<hostaddr> gives the server address. The value for C<host> is ignored
 unless needed for authentication or verification purposes, in which
-case it will be used as the host name. Note that authentication is
-likely to fail if host is not the name of the machine at
-hostaddr. Also, note that host rather than hostaddr is used to
-identify the connection in C<~/.pgpass> (see Section 31.14 of the
-PostgreSQL documentation).
+case it will be used as the host name.
+
+Note that authentication is likely to fail if C<host> is not the name
+of the machine at C<hostaddr>. Also, note that C<host> rather than
+C<hostaddr> is used to identify the connection in C<~/.pgpass> (see
+Section 31.14 of the PostgreSQL documentation).
+
+=item *
 
 Without either a host name or host address, libpq will connect using a
 local Unix-domain socket; or on machines without Unix-domain sockets,
 it will attempt to connect to localhost.
+
+=back
 
 =item port
 
@@ -143,19 +166,23 @@ Specifies a value for the application_name configuration parameter.
 
 =item fallback_application_name
 
-Specifies a fallback value for the application_name configuration
+Specifies a fallback value for the C<application_name> configuration
 parameter. This value will be used if no value has been given for
-application_name via a connection parameter or the PGAPPNAME
-environment variable. Specifying a fallback name is useful in generic
-utility programs that wish to set a default application name but allow
-it to be overridden by the user.
+application_name via a connection parameter or the C<PGAPPNAME>
+environment variable.
+
+Specifying a fallback name is useful in generic utility programs that
+wish to set a default application name but allow it to be overridden
+by the user.
 
 =item keepalives
 
 Controls whether client-side TCP keepalives are used. The default
-value is 1, meaning on, but you can change this to 0, meaning off, if
-keepalives are not wanted. This parameter is ignored for connections
-made via a Unix-domain socket.
+value is C<1>, meaning on, but you can change this to C<0>, meaning
+off, if keepalives are not wanted.
+
+This parameter is ignored for connections made via a Unix-domain
+socket.
 
 =item keepalives_idle
 
@@ -163,9 +190,9 @@ Controls the number of seconds of inactivity after which TCP should
 send a keepalive message to the server. A value of zero uses the
 system default. This parameter is ignored for connections made via a
 Unix-domain socket, or if keepalives are disabled. It is only
-supported on systems where the TCP_KEEPIDLE or TCP_KEEPALIVE socket
-option is available, and on Windows; on other systems, it has no
-effect.
+supported on systems where the C<TCP_KEEPIDLE> or C<TCP_KEEPALIVE>
+socket option is available, and on Windows; on other systems, it has
+no effect.
 
 =item keepalives_interval
 
@@ -173,7 +200,7 @@ Controls the number of seconds after which a TCP keepalive message
 that is not acknowledged by the server should be retransmitted. A
 value of zero uses the system default. This parameter is ignored for
 connections made via a Unix-domain socket, or if keepalives are
-disabled. It is only supported on systems where the TCP_KEEPINTVL
+disabled. It is only supported on systems where the C<TCP_KEEPINTVL>
 socket option is available, and on Windows; on other systems, it has
 no effect.
 
@@ -183,12 +210,8 @@ Controls the number of TCP keepalives that can be lost before the
 client's connection to the server is considered dead. A value of zero
 uses the system default. This parameter is ignored for connections
 made via a Unix-domain socket, or if keepalives are disabled. It is
-only supported on systems where the TCP_KEEPINTVL socket option is
+only supported on systems where the C<TCP_KEEPINTVL> socket option is
 available; on other systems, it has no effect.
-
-=item tty
-
-Ignored (formerly, this specified where to send server debug output).
 
 =item sslmode
 
@@ -280,7 +303,7 @@ authentication instead of the default SSPI.
 =item service
 
 Service name to use for additional parameters. It specifies a service
-name in pg_service.conf that holds additional connection
+name in C<pg_service.conf> that holds additional connection
 parameters. This allows applications to specify only a service name so
 connection parameters can be centrally maintained. See Section 31.15
 of the PostgreSQL documentation.
@@ -318,8 +341,8 @@ Similar to C<new> but returns inmediately without waiting for the
 network connection to the database and the protocol handshake to be
 completed.
 
-This method combined with C<pollStart> described below allows to establish database
-connections asynchronously.
+This method combined with C<pollStart> described below allows to
+establish database connections asynchronously.
 
 I<(This method wraps PQconnectStart)>
 
@@ -337,7 +360,6 @@ main loop, rather than down inside PQconnectdbParams or PQconnectdb,
 and so the application can manage this operation in parallel with
 other activities.
 
-
 Neither C<start> nor C<connectPoll> will block, so long as a number of
 restrictions are met:
 
@@ -345,9 +367,9 @@ restrictions are met:
 
 =item *
 
-The C<hostaddr> and C<host> parameters are used appropriately to ensure that
-name and reverse name queries are not made. See the documentation of
-these parameters under L</new> above for details.
+The C<hostaddr> and C<host> parameters are used appropriately to
+ensure that name and reverse name queries are not made. See the
+documentation of these parameters under L</new> above for details.
 
 =item *
 
@@ -522,10 +544,10 @@ Is reported if the connection is bad.
 
 PostgreSQL documentation contains the following warning:
 
-   Caution: C<transactionStatus> will give incorrect results when using
-   a PostgreSQL 7.3 server that has the parameter autocommit set to
-   off. The server-side autocommit feature has been deprecated and does
-   not exist in later server versions.
+   Caution: C<transactionStatus> will give incorrect results when
+   using a PostgreSQL 7.3 server that has the parameter autocommit set
+   to off. The server-side autocommit feature has been deprecated and
+   does not exist in later server versions.
 
 =item $dbc->parameterStatus
 
@@ -684,7 +706,7 @@ Returns a Pg::PQ::Result object or undef. A valid object will
 generally be returned except in out-of-memory conditions or serious
 errors such as inability to send the command to the server. If
 C<undef> is returned, it should be treated like a C<PGRES_FATAL_ERROR>
-result. Use C<errorMessage to get more information about such errors.
+result. Use C<errorMessage> to get more information about such errors.
 
 It is allowed to include multiple SQL commands (separated by
 semicolons) in the command string. Multiple queries sent in a single
@@ -696,17 +718,88 @@ last command executed from the string. Should one of the commands
 fail, processing of the string stops with it and the returned
 Pg::PQ::Result object describes the error condition.
 
-=item $dbc->prepare
+=item $res = $dbc->prepare($name => $query)
 
-=item $dbc->execQueryPrepared
+Submits a request to create a prepared statement with the given
+parameters, and waits for completion.
 
-=item $dbc->getCancel
+C<prepare> creates a prepared statement for later execution with
+C<execQueryPrepared>. This feature allows commands that will be used
+repeatedly to be parsed and planned just once, rather than each time
+they are executed. C<prepare> is supported only in protocol 3.0 and
+later connections; it will fail when using protocol 2.0.
 
-=item $dbc->notifies
+The function creates a prepared statement named C<$name> from the
+C<$query> string, which must contain a single SQL command. C<$name>
+can be "" to create an unnamed statement, in which case any
+pre-existing unnamed statement is automatically replaced; otherwise it
+is an error if the statement name is already defined in the current
+session. If any parameters are used, they are referred to in the query
+as $1, $2, etc. (see C<describePrepared> for a means to find out what
+data types were inferred).
 
-=item $dbc->makeEmptyResult
+As with C<execQuery>, the result is normally a Pg::PQ::Result object
+whose contents indicate server-side success or failure. An undefined
+result indicates out-of-memory or inability to send the command at
+all. Use C<errorMessage> to get more information about such errors.
 
-=item $dbc->escapeString
+Prepared statements for use with C<execQueryPrepared> can also be
+created by executing SQL C<PREPARE> statements. Also, although there
+is no libpq function for deleting a prepared statement, the SQL
+C<DEALLOCATE> statement can be used for that purpose.
+
+=item $res = $dbc->execQueryPrepared($name => @args)
+
+Sends a request to execute a prepared statement with given parameters,
+and waits for the result.
+
+C<execQueryPrepared> is like C<exec>, but the command to be executed
+is specified by naming a previously-prepared statement, instead of
+giving a query string. This feature allows commands that will be used
+repeatedly to be parsed and planned just once, rather than each time
+they are executed. The statement must have been prepared previously in
+the current session. C<execQueryPrepared> is supported only in
+protocol 3.0 and later connections; it will fail when using protocol
+2.0.
+
+The parameters are identical to C<execQueryParams>, except that the
+name of a prepared statement is given instead of a query string.
+
+=item $res = $dbc->describePrepared($name)
+
+Submits a request to obtain information about the specified prepared
+statement, and waits for completion.
+
+C<describePrepared> allows an application to obtain information about
+a previously prepared statement. It is supported only in protocol 3.0
+and later connections; it will fail when using protocol 2.0.
+
+C<$name> can be "" to reference the unnamed statement, otherwise it
+must be the name of an existing prepared statement. On success, a
+Pg::PQ::Result object with status C<PGRES_COMMAND_OK> is returned. The
+functions C<nParams> and C<paramType> can be applied to this
+Pg::PQ::Result object to obtain information about the parameters of
+the prepared statement, and the methods C<nFields>, C<fName>,
+C<fType>, etc provide information about the result columns (if any) of
+the statement.
+
+=item $dbc->describePortal($portalName)
+
+Submits a request to obtain information about the specified portal,
+and waits for completion.
+
+C<describePortal> allows an application to obtain information about a
+previously created portal (libpq does not provide any direct access to
+portals, but you can use this function to inspect the properties of a
+cursor created with a DECLARE CURSOR SQL command). C<describePortal>
+is supported only in protocol 3.0 and later connections; it will fail
+when using protocol 2.0.
+
+C<$name> can be "" to reference the unnamed portal, otherwise it must
+be the name of an existing portal. On success, a Pg::PQ::Result object
+with status C<PGRES_COMMAND_OK> is returned. Its methods C<nFields>,
+C<fName>, C<fType>, etc can be called to obtain information about the
+result columns (if any) of the portal.
 
 =item $dbc->sendQuery
 
@@ -724,34 +817,48 @@ Pg::PQ::Result object describes the error condition.
 
 
 
+=item $dbc->getCancel
 
 
 
+=item $dbc->notifies
+
+=item $dbc->makeEmptyResult
+
+=item $dbc->escapeString
 
 =back
 
+=head2 Constants
+
 =head1 SEE ALSO
 
-Mention other useful documentation such as the documentation of
-related modules or operating system documentation (such as man pages
-in UNIX), or any relevant external documentation such as RFCs or
-standards.
+Most of the time you would prefer to use L<DBD::Pg> through L<DBI> (the
+standard Perl database access module) to PostgreSQL databases.
 
-If you have a mailing list set up for your module, mention it here.
+L<AnyEvent::Pg> integrates Pg::PQ under the L<AnyEvent> framework.
 
-If you have a web site set up for your module, mention it here.
+The original PostgreSQL documentation available from
+L<http://www.postgresql.org/docs/>. Note that this module is a thin
+layer on top of libpq, and probably the documentation corresponding to
+the version of libpq installed on your machine would actually be more
+accurate in some aspects than that included here.
 
 =head1 AUTHOR
 
-Salvador Fandino, E<lt>salva@E<gt>
+Salvador FandiE<ntilde>o, E<lt>sfandino@yahoo.comE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2011 by Salvador Fandino
+Copyright (C) 2011 by Qindel FormaciE<oacute>n y Servicios S.L.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself, either Perl version 5.10.1 or,
 at your option, any later version of Perl 5 you may have available.
 
+The documentation of this module is based on the original libpq
+documentation that has the following copyright:
+
+Copyright (C) 1996-2011 PostgreSQL Global Development Group.
 
 =cut
