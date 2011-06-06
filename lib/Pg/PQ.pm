@@ -62,6 +62,7 @@ Pg::PQ - Perl wrapper for PostgreSQL libpq
 
 These are the methods available from the class Pg::PQ::Conn:
 
+
 =over 4
 
 =item $dbc = Pg::PQ::Conn->new($conninfo)
@@ -379,96 +380,9 @@ trace will not block.
 =item *
 
 You ensure that the socket is in the appropriate state before calling
-C<connectPoll>, as described below.
+C<connectPoll>, as described in L</Non-blocking database access>.
 
 =back
-
-To begin a nonblocking connection request, call C<$dbc =
-Pg::PQ-E<gt>start($conninfo)>. If C<$dbc> is undefined, then libpq has
-been unable to allocate a new Pg::PQ::Conn object. Otherwise, a valid
-Pg::PQ::Conn object is returned (though not yet representing a valid
-connection to the database). On return from C<start>, call C<$status =
-$dbc-E<gt>status>. If C<$status> equals C<CONNECTION_BAD>, C<start>
-has failed.
-
-If C<start> succeeds, the next stage is to poll libpq so that
-it can proceed with the connection sequence.
-Use C<$fd = $dbc-E<gt>socket> to obtain the descriptor of the socket
-underlying the database connection. Loop thus: If
-C<$dbc-E<gt>connectPoll> last returned C<PGRES_POLLING_READING>, wait
-until the socket is ready to read (as indicated by C<select>, C<poll>,
-or similar system function). Then call C<$dbc-E<gt>connectPoll>
-again. Conversely, if C<$dbc-E<gt>connectPoll> last returned
-C<PGRES_POLLING_WRITING>, wait until the socket is ready to write,
-then call C<$dbc-E<gt>connectPoll> again. If you have yet to call
-C<connectPoll>, i.e., just after the call to C<start>, behave as if it
-last returned C<PGRES_POLLING_WRITING>. Continue this loop until
-C<connectPoll> returns C<PGRES_POLLING_FAILED>, indicating the
-connection procedure has failed, or C<PGRES_POLLING_OK>, indicating
-the connection has been successfully made.
-
-At any time during connection, the status of the connection can be
-checked by calling C<$dbc-E<gt>status>. If this gives
-C<CONNECTION_BAD>, then the connection procedure has failed; if it
-gives C<CONNECTION_OK>, then the connection is ready. Both of these
-states are equally detectable from the return value of C<connectPoll>,
-described above. Other states might also occur during (and only
-during) an asynchronous connection procedure. These indicate the
-current stage of the connection procedure and might be useful to
-provide feedback to the user for example. These statuses are:
-
-=over 4
-
-=item CONNECTION_STARTED
-
-Waiting for connection to be made.
-
-=item CONNECTION_MADE
-
-Connection OK; waiting to send.
-
-=item CONNECTION_AWAITING_RESPONSE
-
-Waiting for a response from the server.
-
-=item CONNECTION_AUTH_OK
-
-Received authentication; waiting for backend start-up to finish.
-
-=item CONNECTION_SSL_STARTUP
-
-Negotiating SSL encryption.
-
-=item CONNECTION_SETENV
-
-Negotiating environment-driven parameter settings.
-
-=back
-
-Note that, although these constants will remain (in order to maintain
-compatibility), an application should never rely upon these occurring
-in a particular order, or at all, or on the status always being one of
-these documented values. An application might do something like this:
-
-
-  given($dbc->status) {
-      when (CONNECTION_STARTED) {
-          say "Connecting...";
-      }
-      when (CONNECTION_MADE) {
-          say "Connected to server...";
-      }
-      ...
-      default {
-          say "Connecting...";
-      }
-  }
-
-The C<connect_timeout> connection parameter is ignored when using
-C<start> and C<connectPoll>; it is the application's responsibility to
-decide whether an excessive amount of time has elapsed. Otherwise,
-C<tart> followed by a C<connectPoll> loop is equivalent to
-C<new>.
 
 =item $dbc->db
 
@@ -783,7 +697,7 @@ the prepared statement, and the methods C<nFields>, C<fName>,
 C<fType>, etc provide information about the result columns (if any) of
 the statement.
 
-=item $dbc->describePortal($portalName)
+=item $res = $dbc->describePortal($portalName)
 
 Submits a request to obtain information about the specified portal,
 and waits for completion.
@@ -801,35 +715,365 @@ with status C<PGRES_COMMAND_OK> is returned. Its methods C<nFields>,
 C<fName>, C<fType>, etc can be called to obtain information about the
 result columns (if any) of the portal.
 
-=item $dbc->sendQuery
+=item $ok = $dbc->sendQuery($query, @args)
 
-=item $dbc->sendQueryPrepared
+Submits a command to the server without waiting for the result(s). 1
+is returned if the command was successfully dispatched and 0 if not
+(in which case, use C<errorMessage> to get more information about the
+failure).
 
-=item $dbc->result
+After successfully calling C<sendQuery>, call C<getResult> one or more
+times to obtain the results.
 
-=item $dbc->consumeInput
+C<sendQuery cannot be called again on the same connection until
+C<getResult> has returned C<undef>, indicating that the command is
+done.
 
-=item $dbc->busy
+=item $ok = $dbc->sendPrepare($name => $query)
 
-=item $dbc->nonBlocking
+Sends a request to create a prepared statement without waiting for
+completion.
+
+This is an asynchronous version of C<prepare>. It returns 1 if it was
+able to dispatch the request, and 0 if not. After a successful call,
+call C<getResult> to determine whether the server successfully created
+the prepared statement.
+
+Like C<prepare>, it will not work on 2.0-protocol connections.
+
+=item $ok = $dbc->sendQueryPrepared($name, @args)
+
+Sends a request to execute a prepared statement with given parameters,
+without waiting for the result(s).
+
+This is similar to C<sendQuery>, but the command to be executed is
+specified by naming a previously-prepared statement, instead of giving
+a query string. The function's parameters are handled identically to
+C<execQueryPrepared>.
+
+It will not work on 2.0-protocol connections.
+
+=item $ok = $dbc->sendDescribePrepared($name)
+
+Submits a request to obtain information about the specified prepared
+statement, without waiting for completion.
+
+This is an asynchronous version of C<describePrepared>: it returns 1
+if it was able to dispatch the request, and 0 if not. After a
+successful call, call C<getResult> to obtain the results.
+
+It will not work on 2.0-protocol connections.
+
+=item $ok = $dbc->sendDescribePortal($name)
+
+Submits a request to obtain information about the specified portal,
+without waiting for completion.
+
+This is an asynchronous version of C<describePortal>: it returns 1 if
+it was able to dispatch the request, and 0 if not. After a successful
+call, call C<getResult> to obtain the results.
+
+It will not work on 2.0-protocol connections.
+
+=item $res = $dbc->result
+
+Waits for the next result from a prior C<sendQuery>, C<sendPrepare>,
+C<sendQueryPrepared>, C<sendDescribePrepare> or C<sendDescribePortal>
+method call, and returns it. C<undef> is returned when the
+command is complete and there will be no more results.
+
+C<result> must be called repeatedly until it returns C<undef>
+indicating that the command is done (if called when no command is
+active, C<result> will just return C<undef> at once).
+
+Each non undefined result from C<getResult> should be processed using
+the accessor methods for the Pg::PQ::Result class described below.
+
+Note that C<result> will block only if a command is active and the
+necessary response data has not yet been read by C<consumeInput>.
+
+Using C<sendQuery> and C<result> solves one of C<exec>'s problems: if
+a command string contains multiple SQL commands, the results of those
+commands can be obtained individually.
+
+This allows a simple form of overlapped processing, by the way: the
+client can be handling the results of one command while the server is
+still working on later queries in the same command string.
+
+However, calling C<result> will still cause the client to block until the
+server completes the next SQL command. This can be avoided by proper
+use of the C<consumeInput> and C<busy> methods described next.
+
+=item $ok = $dbc->consumeInput
+
+If input is available from the server, consume it.
+
+C<consumeInput> normally returns 1 indicating "no error", but returns
+0 if there was some kind of trouble (in which case C<errorMessage> can
+be consulted). Note that the result does not say whether any input
+data was actually collected.
+
+After calling C<consumeInput>, the application can check C<busy>
+and/or C<notifies> to see if their state has changed.
+
+C<consumeInput> can be called even if the application is not prepared
+to deal with a result or notification just yet. The method will read
+available data and save it in a buffer, thereby causing a C<select>
+read-ready indication to go away.
+
+=item $ok = $dbc->busy
+
+Returns 1 if a command is busy, that is, C<result> would block waiting
+for input. A 0 return indicates that C<result> can be called with
+assurance of not blocking.
+
+C<busy> will not itself attempt to read data from the server;
+therefore C<consumeInput> must be invoked first, or the busy state
+will never end.
+
+=item $nb = $dbc->nonBlocking
+
+=item $dbc->nonBlocking($bool)
+
+This methods get and sets the non blocking status of the database connection.
 
 =item $dbc->flush
 
+Attempts to flush any queued output data to the server. Returns 0 if
+successful (or if the send queue is empty), -1 if it failed for some
+reason, or 1 if it was unable to send all the data in the send queue
+yet (this case can only occur if the connection is nonblocking).
 
+=item ($ok, $msg) = $dbc->cancel
 
-=item $dbc->getCancel
+Requests that the server abandon processing of the current command.
 
+The return value C<$ok> is 1 if the cancel request was successfully
+dispatched and 0 if not. If not a second value is returned with an error
+message explaining why not.
 
+Successful dispatch is no guarantee that the request will have any
+effect, however. If the cancellation is effective, the current command
+will terminate early and return an error result. If the cancellation
+fails (say, because the server was already done processing the
+command), then there will be no visible result at all.
 
 =item $dbc->notifies
 
+Returns a Pg::PQ::Notify object representing the next notification
+from a list of unhandled notification messages received from the
+server or undef if the list is empty. See L</Asynchronous
+notification> below.
+
 =item $dbc->makeEmptyResult
+
+
 
 =item $dbc->escapeString
 
 =back
 
 =head2 Constants
+
+=head2 Non-blocking database access
+
+=head3 Non-blocking connecting to the database
+
+To begin a nonblocking connection request, call C<$dbc =
+Pg::PQ-E<gt>start($conninfo)>. If C<$dbc> is undefined, then libpq has
+been unable to allocate a new Pg::PQ::Conn object. Otherwise, a valid
+Pg::PQ::Conn object is returned (though not yet representing a valid
+connection to the database).
+
+On return from C<start>, call C<$status = $dbc-E<gt>status>. If
+C<$status> equals C<CONNECTION_BAD>, C<start> has failed.
+
+If C<start> succeeds, the next stage is to poll libpq so that it can
+proceed with the connection sequence.  Use C<socket> to obtain the
+descriptor of the socket underlying the database connection.
+
+Loop thus:
+
+=over 4
+
+=item *
+
+If C<connectPoll> last returned C<PGRES_POLLING_READING>,
+wait until the socket is ready to read (as indicated by C<select>,
+C<poll>, or similar system function). Then call
+C<connectPoll> again.
+
+=item *
+
+Conversely, if C<connectPoll> last returned C<PGRES_POLLING_WRITING>,
+wait until the socket is ready to write, then call C<connectPoll>
+again.
+
+=item *
+
+If you have yet to call C<connectPoll>, i.e., just after the
+call to C<start>, behave as if it last returned
+C<PGRES_POLLING_WRITING>.
+
+=item *
+
+Continue this loop until C<connectPoll> returns
+C<PGRES_POLLING_FAILED>, indicating the connection procedure has
+failed, or C<PGRES_POLLING_OK>, indicating the connection has been
+successfully made.
+
+=back
+
+At any time during connection, the status of the connection can be
+checked by calling C<status>. If this gives C<CONNECTION_BAD>, then
+the connection procedure has failed; if it gives C<CONNECTION_OK>,
+then the connection is ready. Both of these states are equally
+detectable from the return value of C<connectPoll>, described
+above.
+
+Other states might also occur during (and only during) an asynchronous
+connection procedure. These indicate the current stage of the
+connection procedure and might be useful to provide feedback to the
+user for example. These statuses are:
+
+=over 4
+
+=item CONNECTION_STARTED
+
+Waiting for connection to be made.
+
+=item CONNECTION_MADE
+
+Connection OK; waiting to send.
+
+=item CONNECTION_AWAITING_RESPONSE
+
+Waiting for a response from the server.
+
+=item CONNECTION_AUTH_OK
+
+Received authentication; waiting for backend start-up to finish.
+
+=item CONNECTION_SSL_STARTUP
+
+Negotiating SSL encryption.
+
+=item CONNECTION_SETENV
+
+Negotiating environment-driven parameter settings.
+
+=back
+
+Note that, although these constants will remain (in order to maintain
+compatibility), an application should never rely upon these occurring
+in a particular order, or at all, or on the status always being one of
+these documented values. An application might do something like this:
+
+
+  given($dbc->status) {
+      when (CONNECTION_STARTED) {
+          say "Connecting...";
+      }
+      when (CONNECTION_MADE) {
+          say "Connected to server...";
+      }
+      ...
+      default {
+          say "Connecting...";
+      }
+  }
+
+The C<connect_timeout> connection parameter is ignored when using
+C<start> and C<connectPoll>; it is the application's responsibility to
+decide whether an excessive amount of time has elapsed. Otherwise,
+C<tart> followed by a C<connectPoll> loop is equivalent to
+C<new>.
+
+=head3 Non-blocking quering the database
+
+A typical non-blocking application will have a main loop that
+uses C<select> or C<poll> to wait for all the conditions that it must
+respond to.
+
+After some query is dispatched to the database using any of the
+asynchronous send methods (C<sendQuery>, C<sendPrepare>,
+C<sendQueryPrepared>, C<sendDescribePrepared> or
+C<sendDescribePortal>) one of the conditions will be input available
+from the server, which in terms of C<select> means readable data on
+the file descriptor identified by C<socket>.
+
+When the main loop detects input ready, it should call C<consumeInput>
+to read the input. It can then call C<isBusy>, followed by C<result>
+if C<busy> returns false (0).
+
+It can also call C<notifies> to detect C<NOTIFY> messages (see Section
+31.7 of the PostgreSQL documentation).
+
+A client that uses C<sendQuery>/C<result> can also attempt to cancel a
+command that is still being processed by the server (see Section 31.5
+of the PostgreSQL documentation). But regardless of the return value
+of C<cancel>, the application must continue with the normal
+result-reading sequence using C<result. A successful cancellation will
+simply cause the command to terminate sooner than it would have
+otherwise.
+
+By using the functions described above, it is possible to avoid
+blocking while waiting for input from the database server. However, it
+is still possible that the application will block waiting to send
+output to the server. This is relatively uncommon but can happen if
+very long SQL commands or data values are sent (it is much more
+probable if the application sends data via C<COPY IN>, however).
+
+To prevent this possibility and achieve completely nonblocking
+database operation, the nonblocking mode has to be activated for
+the session using C<$dbc->nonBlocking(1)>.
+
+After sending any command or data on a nonblocking connection, call
+C<flush>. If it returns 1, wait for the socket to be write-ready and
+call it again; repeat until it returns 0. Once C<flush> returns 0,
+wait for the socket to be read-ready and then read the response as
+described above.
+
+=head2 Asynchronous notifications
+
+PostgreSQL offers asynchronous notification via the LISTEN and NOTIFY
+commands. A client session registers its interest in a particular
+notification channel with the LISTEN command (and can stop listening
+with the UNLISTEN command). All sessions listening on a particular
+channel will be notified asynchronously when a NOTIFY command with
+that channel name is executed by any session. A "payload" string can
+be passed to communicate additional data to the listeners.
+
+libpq applications submit C<LISTEN>, C<UNLISTEN>, and C<NOTIFY>
+commands as ordinary SQL commands. The arrival of C<NOTIFY> messages
+can subsequently be detected by calling C<notifies>.
+
+The method C<notifies> returns the next notification (Pg::PQ::Notify)
+from a list of unhandled notification messages received from the
+server. It returns undef if there are no pending notifications.
+
+Once a notification is returned from C<notifies>, it is considered
+handled and will be removed from the list of notifications.
+
+C<notifies> does not actually read data from the server; it just
+returns messages previously absorbed by another libpq function.
+
+In prior releases of libpq, the only way to ensure timely receipt of
+C<NOTIFY> messages was to constantly submit commands, even empty ones,
+and then check C<notifies> after each C<exec>. While this still works,
+it is deprecated as a waste of processing power.
+
+A better way to check for C<NOTIFY> messages when you have no useful
+commands to execute is to call C<consumeInput>, then check
+C<notifies>. You can use the C<select> builtin to wait for data to
+arrive from the server, thereby using no CPU power unless there is
+something to do (see C<socket> to obtain the file descriptor number to
+use with C<select>).
+
+Note that this will work OK whether you submit commands with
+C<sendQuery>/C<result> or simply use C<exec>. You should, however,
+remember to check C<notifies> after each C<result> or C<exec>, to see
+if any notifications came in during the processing of the command.
 
 =head1 SEE ALSO
 
