@@ -37,6 +37,29 @@ sub getssl { croak "Pg::PQ::Conn::getssl not implemented" }
 
 package Pg::PQ::Result;
 
+my %error_fields = qw( severity            S
+                       sqlstate            C
+                       message_primary     M
+                       message_detail      D
+                       message_hint        H
+                       statement_position  P
+                       internal_position   p
+                       internal_query      q
+                       context             W
+                       source_file         F
+                       source_line         L
+                       source_function     R );
+
+sub errorDescription {
+    my $self = shift;
+    my %desc;
+    for my $key (keys %error_fields) {
+	my $v = $self->errorField($error_fields{$key});
+	$desc{$key} = $v if defined $v;
+    }
+    return (%desc ? \%desc : ());
+}
+
 sub DESTROY {
     my $self = shift;
     $self->clear if $$self;
@@ -870,6 +893,221 @@ notification> below.
 
 
 =item $dbc->escapeString
+
+=back
+
+=head2 Pg::PQ::Result class
+
+=over 4
+
+=item $status = $res->status
+
+Returns the result status of the command.
+
+C<$status> can take one of the following values:
+
+=over 4
+
+=item PGRES_EMPTY_QUERY
+
+The string sent to the server was empty. 
+
+=item PGRES_COMMAND_OK
+
+Successful completion of a command returning no data. 
+
+=item PGRES_TUPLES_OK
+
+Successful completion of a command returning data (such as a SELECT or SHOW). 
+
+=item PGRES_COPY_OUT
+
+Copy Out (from server) data transfer started. 
+
+=item PGRES_COPY_IN
+
+Copy In (to server) data transfer started. 
+
+=item PGRES_BAD_RESPONSE
+
+The server's response was not understood. 
+
+=item PGRES_NONFATAL_ERROR
+
+A nonfatal error (a notice or warning) occurred. 
+
+=item PGRES_FATAL_ERROR
+
+A fatal error occurred. 
+
+=back
+
+If the result status is C<PGRES_TUPLES_OK>, then the functions
+described below can be used to retrieve the rows returned by the
+query.
+
+Note that a C<SELECT> command that happens to retrieve zero rows still
+shows C<PGRES_TUPLES_OK>. C<PGRES_COMMAND_OK> is for commands that can
+never return rows (C<INSERT>, C<UPDATE>, etc.). A response of
+C<PGRES_EMPTY_QUERY> might indicate a bug in the client software.
+
+A result of status C<PGRES_NONFATAL_ERROR> will never be returned
+directly by C<exec> or other query execution methods; results of this
+kind are instead passed to the notice processor (see Section 31.11).
+
+# FIXME: revise last paragraph notice processor reference.
+
+=item $str = $res->statusMessage
+
+Returns the status as a human readable string.
+
+=item $err = $res->errorMessage
+
+Returns the error message associated with the command or an empty
+string is there was no error.
+
+Immediately following a C<Pg::PQ::Conn::exec> or
+C<Pg::PQ::Conn::result> call, C<$dbc-E<gt>errorMessage> (on the
+connection object) will return the same string as
+C<$res-E<gt>errorMessage> (on the result). However, a Pg::PQ::Result
+will retain its error message until destroyed, whereas the
+connection's error message will change when subsequent operations are
+done.
+
+=item $field = $res->errorField($fieldCode)
+
+Returns an individual field of an error report.
+
+=item $desc = $res->errorDescription
+
+Return a hash reference whose entries describe the error as follows:
+
+=over 4
+
+=item severity
+
+The severity. The field contents are C<ERROR>, C<FATAL>, or C<PANIC>
+(in an error message), or C<WARNING>, C<NOTICE>, C<DEBUG>, C<INFO>, or
+C<LOG> (in a notice message), or a localized translation of one of
+these. Always present.
+
+=item sqlstate
+
+The C<SQLSTATE> code for the error.
+
+The C<SQLSTATE> code identifies the type of error that has occurred;
+it can be used by front-end applications to perform specific
+operations (such as error handling) in response to a particular
+database error. For a list of the possible SQLSTATE codes, see
+Appendix A of the PostgreSQL documentation.
+
+This field is not localizable, and is always present.
+
+=item primary
+
+The primary human-readable error message (typically one line). Always
+present.
+
+=item detail
+
+Detail. An optional secondary error message carrying more detail about the problem. Might run to multiple lines. 
+
+=item hint
+
+Hint. An optional suggestion what to do about the problem. This is
+intended to differ from C<detail> in that it offers advice
+(potentially inappropriate) rather than hard facts. Might run to
+multiple lines.
+
+=item statement_position
+
+An integer indicating an error cursor position as an index into the
+original statement string. The first character has index 1, and
+positions are measured in characters not bytes.
+
+=item internal_position
+
+This is defined the same as the C<statement_position> field, but
+it is used when the cursor position refers to an internally generated
+command rather than the one submitted by the client.
+
+The C<internal_query> field will always appear when this field
+appears.
+
+=item internal_query
+
+The text of a failed internally-generated command. This could be, for
+example, a SQL query issued by a PL/pgSQL function.
+
+=item context
+
+An indication of the context in which the error occurred. Presently
+this includes a call stack traceback of active procedural language
+functions and internally-generated queries. The trace is one entry per
+line, most recent first.
+
+=item source_file
+
+The file name of the source-code location where the error was
+reported.
+
+=item source_line
+
+The line number of the source-code location where the error was
+reported.
+
+=item source_function
+
+The name of the source-code function reporting the error.
+
+=back
+
+The client is responsible for formatting displayed information to meet
+its needs; in particular it should break long lines as needed. Newline
+characters appearing in the error message fields should be treated as
+paragraph breaks, not line breaks.
+
+Errors generated internally by libpq will have severity and primary
+message, but typically no other fields. Errors returned by a
+pre-3.0-protocol server will include severity and primary message, and
+sometimes a detail message, but no other fields.
+
+Note that error fields are only available from Pg::PQ::Result objects;
+there is no C<Pq::PQ::Conn::errorDescription> method.
+
+=item $n = $res->nRows
+
+Returns the number of rows in the query result.
+
+=item $n = $res->nColumns
+
+Returns the number of columns in the query result.
+
+=item $name = $res->columnName($index)
+
+Returns the column name associated with the given column
+number. Column numbers start at 0.
+
+=item $n = $res->columnNumber($column_name)
+
+Returns the column number associated with the given column name.
+
+-1 is returned if the given name does not match any column.
+
+The given name is treated like an identifier in an SQL command, that
+is, it is downcased unless double-quoted. For example, given a query
+result generated from the SQL command:
+
+  SELECT 1 AS FOO, 2 AS "BAR";
+
+we would have the results:
+
+  $res->columnName(0) # foo
+  PQfname(res, 1)              BAR
+  PQfnumber(res, "FOO")        0
+  PQfnumber(res, "foo")        0
+  PQfnumber(res, "BAR")        -1
+  PQfnumber(res, "\"BAR\"")    1
 
 =back
 

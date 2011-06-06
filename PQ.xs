@@ -301,23 +301,29 @@ int PQflush(PGconn *conn);
 
 MODULE = Pg::PQ		PACKAGE = Pg::PQ::Result          PREFIX=PQ
 
-ExecStatusType PQresultStatus(PGresult *res);
+ExecStatusType PQresultStatus(PGresult *res)
 ALIAS:
     status = 0
 
-char *PQresStatus(ExecStatusType status);
-ALIAS:
-    statusString = 0
+char *PQresStatus(ExecStatusType status)
 
-char *PQresultErrorMessage(PGresult *res);
+char *statusMessage(PGresult *res)
+CODE:
+    RETVAL = PQresStatus(PQresultStatus(res));
+OUTPUT:
+    RETVAL
+
+char *PQresultErrorMessage(PGresult *res)
 ALIAS:
     errorMessage = 0
 CLEANUP:
     sv_chomp(ST(0));
 
-char *PQresultErrorField(PGresult *res, int fieldcode);
+char *PQresultErrorField(PGresult *res, char field);
 ALIAS:
     errorField = 0
+CLEANUP:
+    sv_chomp(ST(0));
 
 void PQclear(PGresult *res)
 POSTCALL:
@@ -335,11 +341,11 @@ ALIAS:
 
 char *PQfname(PGresult *res, int column_number)
 ALIAS:
-    fieldName = 0
+    columnName = 0
 
 int PQfnumber(PGresult *res, const char *column_name)
 ALIAS:
-    fieldNumber = 0
+    columnNumber = 0
 
 Oid PQftable(PGresult *res, int column_number)
 ALIAS:

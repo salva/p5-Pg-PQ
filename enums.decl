@@ -90,3 +90,6 @@ enum PGVerbosity  => pqerrors
     PQERRORS_DEFAULT,			/* recommended style */
     PQERRORS_VERBOSE,			/* all the facts, ma'am */
 
+enum PGDiag => pqdiag
+
+
