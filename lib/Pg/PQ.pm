@@ -65,6 +65,13 @@ sub DESTROY {
     $self->clear if $$self;
 }
 
+package Pg::PQ::Cancel;
+
+sub DESTROY {
+    my $self = shift;
+    $self->freeCancel if $$self;
+}
+
 1;
 
 __END__
@@ -77,14 +84,28 @@ Pg::PQ - Perl wrapper for PostgreSQL libpq
 
   use Pg::PQ qw(:);
   my $dbc = Pg::PQ::Conn->new("dbname=test host=dbserver");
-  $dbc->status 
 
 =head1 DESCRIPTION
+
+  *******************************************************************
+  ***                                                             ***
+  *** NOTE: This is a very early release that may contain lots of ***
+  *** bugs. The API is not stable and may change between releases ***
+  ***                                                             ***
+  *******************************************************************
+
+This module is a thin wrapper around PostgreSQL libpq C API.
+
+Its main purpose is to let query a PostgreSQL database asynchronously
+from inside common non-blocking frameworks as L<AnyEvent>, L<POE> or
+even L<Coro>.
+
+Besides that, feel free to do anything you want that can be done with
+libpq but not by L<DBD::Pg>.
 
 =head2 Pg::PQ::Conn class
 
 These are the methods available from the class Pg::PQ::Conn:
-
 
 =over 4
 
@@ -867,20 +888,6 @@ successful (or if the send queue is empty), -1 if it failed for some
 reason, or 1 if it was unable to send all the data in the send queue
 yet (this case can only occur if the connection is nonblocking).
 
-=item ($ok, $msg) = $dbc->cancel
-
-Requests that the server abandon processing of the current command.
-
-The return value C<$ok> is 1 if the cancel request was successfully
-dispatched and 0 if not. If not a second value is returned with an error
-message explaining why not.
-
-Successful dispatch is no guarantee that the request will have any
-effect, however. If the cancellation is effective, the current command
-will terminate early and return an error result. If the cancellation
-fails (say, because the server was already done processing the
-command), then there will be no visible result at all.
-
 =item $dbc->notifies
 
 Returns a Pg::PQ::Notify object representing the next notification
@@ -888,11 +895,52 @@ from a list of unhandled notification messages received from the
 server or undef if the list is empty. See L</Asynchronous
 notification> below.
 
-=item $dbc->makeEmptyResult
+=item $esc = $dbc->escapeLiteral($literal)
+
+C<escapeLiteral> escapes a string for use within an SQL command. This
+is useful when inserting data values as literal constants in SQL
+commands. Certain characters (such as quotes and backslashes) must be
+escaped to prevent them from being interpreted specially by the SQL
+parser.
+
+The return string has all special characters replaced so that they can
+be properly processed by the PostgreSQL string literal parser. The
+single quotes that must surround PostgreSQL string literals are
+included in the result string.
+
+On error, C<escapeLiteral> returns C<undef> and a suitable message is
+stored in the Pg::PQ::Conn object.
+
+=item $esc = $conn->escapeIdentifier($identifier)
+
+C<escapeIdentifier> escapes a string for use as an SQL identifier, such
+as a table, column, or function name. This is useful when a
+user-supplied identifier might contain special characters that would
+otherwise not be interpreted as part of the identifier by the SQL
+parser, or when the identifier might contain upper case characters
+whose case should be preserved.
+
+C<escapeIdentifier> returns a version of the str parameter escaped as
+an SQL identifier. The return string has all special characters
+replaced so that it will be properly processed as an SQL
+identifier.
+
+The return string will also be surrounded by double quotes.
+
+On error, C<escapeIdentifier> returns C<undef> and a suitable message
+is stored in the connection object.
 
 
+=item $esc = $dbc->escapeString($str)
 
-=item $dbc->escapeString
+C<escapeString> escapes string literals, much like C<escapeLiteral>
+but it does not generate the single quotes that must surround
+PostgreSQL string literals; they should be provided in the SQL command
+that the result is inserted into.
+
+Returns undef on error (presently the only possible error conditions
+involve invalid multibyte encoding in the source string) and a
+suitable error message is stored in the connection object.
 
 =back
 
@@ -1102,16 +1150,172 @@ result generated from the SQL command:
 
 we would have the results:
 
-  $res->columnName(0) # foo
-  PQfname(res, 1)              BAR
-  PQfnumber(res, "FOO")        0
-  PQfnumber(res, "foo")        0
-  PQfnumber(res, "BAR")        -1
-  PQfnumber(res, "\"BAR\"")    1
+  $res->columnName(0);          # foo
+  $res->columnName(1);          # BAR
+  $res->columnNumber('FOO');    # 0
+  $res->columnNumber('foo');    # 0
+  $res->columnNumber('BAR');    # -1
+  $res->columnNumber('"BAR"');  # 1
 
 =back
 
+=item $oid = $res->columnTable($index)
+
+Returns the OID of the table from which the given column was
+fetched. Column numbers start at 0.
+
+undef is returned if the column number is out of range, or if the
+specified column is not a simple reference to a table column, or when
+using pre-3.0 protocol. You can query the system table pg_class to
+determine exactly which table is referenced.
+
+=item $col = $res->columnTableColumn($index)
+
+Returns the column number (within its table) of the column making up
+the specified query result column. Query-result column numbers start
+at 0, but table columns have nonzero numbers.
+
+=item $isNull = $res->null($row, $column)
+
+Tests a field for a null value. Row and column numbers start at 0.
+
+This function returns 1 if the field is null and 0 if it contains a
+non-null value.
+
+=item $data = $res->value($row, $column)
+
+Returns a single field value of one row. Row and column numbers start
+at 0.
+
+=item @fields = $res->row($index)
+
+Returns a list of the fields in the indicated row.
+
+=item @fields = $res->column($index)
+
+Return a list of the fields in the indicated column.
+
+=item $nRows = $res->rows
+
+=item @rows = $res->rows
+
+In scalar context this method returns the number of rows in the result set.
+
+In list context it return a list of arrays containing the values on
+every row of the result set.
+
+=item $nColumns = $res->columns
+
+=item @columns = $res->columns
+
+In scalar context this method returns the number of columns in the result set.
+
+In list context it return a list of arrays containing the values on
+every column of the result set.
+
+=item $status = $res->cmdStatus
+
+Returns the command status tag from the SQL command that generated the
+PGresult.
+
+Commonly this is just the name of the command, but it might include
+additional data such as the number of rows processed.
+
+=item $nRows = $res->cmdRows
+
+Returns the number of rows affected by the SQL command.
+
+This function returns a string containing the number of rows affected
+by the SQL statement that generated the Pg::PQ::Result object. This
+function can only be used following the execution of a C<SELECT>,
+C<CREATE TABLE AS>, C<INSERT>, C<UPDATE>, C<DELETE>, C<MOVE>,
+C<FETCH>, or C<COPY> statement, or an C<EXECUTE> of a prepared query
+that contains an C<INSERT>, C<UPDATE>, or C<DELETE> statement. If the
+command that generated the result object was anything else, C<cmdRows>
+returns C<undef>.
+
+=item $oid = $res->oidValue
+
+Returns the OID of the inserted row, if the SQL command was an
+C<INSERT> that inserted exactly one row into a table that has OIDs, or
+a C<EXECUTE> of a prepared query containing a suitable C<INSERT>
+statement.
+
+Otherwise, this function returns C<undef>. This function will also
+return C<undef> if the table affected by the C<INSERT> statement does
+not contain OIDs.
+
+=head2 Pg::PQ::Cancel class
+
+The cancel object is an artifact provided by the C libpq library to
+allow interrupting database requests from signal handlers or from
+other threads.
+
+Due to the way signals and threads are handled in Perl it becomes
+mostly useless here so the functionality is currently disabled.
+
+You can use the cancel method from the Pg::PQ::Conn and non-blocking
+request to obtain a similar functionality.
+
 =head2 Constants
+
+The following constants can be imported from this module:
+
+=over 4
+
+=item :copyres
+
+  PG_COPYRES_ATTRS
+  PG_COPYRES_TUPLES
+  PG_COPYRES_EVENTS
+  PG_COPYRES_NOTICEHOOKS
+
+=item :connection
+
+  CONNECTION_OK
+  CONNECTION_BAD
+  CONNECTION_STARTED
+  CONNECTION_MADE
+  CONNECTION_AWAITING_RESPONSE
+  CONNECTION_AUTH_OK
+  CONNECTION_SETENV
+  CONNECTION_SSL_STARTUP
+  CONNECTION_NEEDED
+
+=item :pgres_polling
+
+  PGRES_POLLING_FAILED
+  PGRES_POLLING_READING
+  PGRES_POLLING_WRITING
+  PGRES_POLLING_OK
+  PGRES_POLLING_ACTIVE
+
+=item :pgres
+
+  PGRES_EMPTY_QUERY
+  PGRES_COMMAND_OK
+  PGRES_TUPLES_OK
+  PGRES_COPY_OUT
+  PGRES_COPY_IN
+  PGRES_BAD_RESPONSE
+  PGRES_NONFATAL_ERROR
+  PGRES_FATAL_ERROR
+
+=item :pqtrans
+
+  PQTRANS_IDLE
+  PQTRANS_ACTIVE
+  PQTRANS_INTRANS
+  PQTRANS_INERROR
+  PQTRANS_UNKNOWN
+
+=item :pqerrors
+
+  PQERRORS_TERSE
+  PQERRORS_DEFAULT
+  PQERRORS_VERBOSE
+
+=back
 
 =head2 Non-blocking database access
 
@@ -1325,6 +1529,18 @@ L<http://www.postgresql.org/docs/>. Note that this module is a thin
 layer on top of libpq, and probably the documentation corresponding to
 the version of libpq installed on your machine would actually be more
 accurate in some aspects than that included here.
+
+=head1 BUGS AND SUPPORT
+
+Send bug reports by email or using the cpan bug tracker at
+L<http://rt.cpan.org>.
+
+=head2 Commercial support
+
+Commercial support, professional services and custom software
+development services around this module are available from the
+QindelGroup (L<http://qindel.com>. Just send me an email with a rough description of your
+requirements and we will get back to you ASAP.
 
 =head1 AUTHOR
 

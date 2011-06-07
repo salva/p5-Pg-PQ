@@ -188,6 +188,8 @@ OUTPUT:
     RETVAL
 
 PGcancel *PQgetCancel(PGconn *conn);
+ALIAS:
+    makeCancel = 0
 
 void PQnotifies(PGconn *conn)
 PREINIT:
@@ -231,6 +233,14 @@ CODE:
     }
 OUTPUT:
     RETVAL
+
+char *PQescapeLiteral(PGconn *conn, const char *str, size_t length(str))
+CLEANUP:
+    if (RETVAL) PQfreemem(RETVAL);
+
+char *PQescapeIdentifier(PGconn *conn, const char *str, size_t length(str))
+CLEANUP:
+    if (RETVAL) PQfreemem(RETVAL);
 
 # unsigned char *PQescapeByteaConn(PGconn *conn, unsigned char *from, size_t from_length, size_t *to_length);
 
@@ -349,11 +359,18 @@ ALIAS:
 
 Oid PQftable(PGresult *res, int column_number)
 ALIAS:
-    fieldTable = 0
+    columnTable = 0
 
-int PQftablecol(PGresult *res, int column_number);
+SV *PQftablecol(PGresult *res, int column_number);
 ALIAS:
-    fieldTableColumn = 0
+    columnTableColumn = 0
+PREINIT:
+    int col;
+CODE:
+    col = PQftablecol(res, column_number);
+    RETVAL = (col ? newSViv(col) : &PL_sv_undef);
+OUTPUT:
+    RETVAL
 
 int PQfformat(PGresult *res, int column_number);
 
@@ -367,6 +384,10 @@ ALIAS:
 
 int PQbinaryTuples(PGresult *res);
 
+int PQgetisnull(PGresult *res, int row_number, int column_number);
+ALIAS:
+    null = 0
+
 # TODO: handle data in binary format
 SV *PQgetvalue(PGresult *res, int row_number, int column_number);
 ALIAS:
@@ -374,11 +395,15 @@ ALIAS:
 PREINIT:
     char *pv;
 CODE:
-    pv = PQgetvalue(res, row_number, column_number);
-    if (pv)
-        RETVAL = newSVpvn(pv, PQgetlength(res, row_number, column_number));
-    else
+    if (PQgetisnull(res, row_number, column_number))
         RETVAL = &PL_sv_undef;
+    else {
+        pv = PQgetvalue(res, row_number, column_number);
+        if (pv)
+            RETVAL = newSVpvn(pv, PQgetlength(res, row_number, column_number));
+        else
+            RETVAL = &PL_sv_undef;
+    }
 OUTPUT:
     RETVAL
 
@@ -397,11 +422,14 @@ PPCODE:
         if (GIMME_V != G_ARRAY) cols = 1;
         EXTEND(SP, cols);
         for (j = 0; j < cols; j++) {
-            char *pv = PQgetvalue(res, i, j);
-            if (pv)
-                mPUSHs(newSVpvn(pv, PQgetlength(res, i, j)));
-            else
-                PUSHs(&PL_sv_undef);
+            if (!PQgetisnull(res, i, j)) {
+                char *pv = PQgetvalue(res, i, j);
+                if (pv) {
+                    mPUSHs(newSVpvn(pv, PQgetlength(res, i, j)));
+                    continue;
+                }
+            }
+            PUSHs(&PL_sv_undef);
         }
         XSRETURN(cols);
     }
@@ -421,11 +449,14 @@ PPCODE:
         if (GIMME_V != G_ARRAY) rows = 1;
         EXTEND(SP, rows);
         for (i = 0; i < rows; i++) {
-            char *pv = PQgetvalue(res, i, j);
-            if (pv)
-                mPUSHs(newSVpvn(pv, PQgetlength(res, i, j)));
-            else
-                PUSHs(&PL_sv_undef);
+            if (!PQgetisnull(res, i, j)) {
+                char *pv = PQgetvalue(res, i, j);
+                if (pv) {
+                    mPUSHs(newSVpvn(pv, PQgetlength(res, i, j)));
+                    continue;
+                }
+            }
+            PUSHs(&PL_sv_undef);
         }
         XSRETURN(rows);
     }
@@ -480,38 +511,71 @@ PPCODE:
             mPUSHs(newRV_noinc((SV*)av));
             if (rows) av_extend(av, rows - 1);
             for (i = 0; i < rows; i++) {
-                char *pv = PQgetvalue(res, i, j);
-                if (pv)
-                    av_store(av, i, newSVpvn(pv, PQgetlength(res, i, j)));
-                else
-                    av_store(av, i, &PL_sv_undef);
+                if (!PQgetisnull(res, i, j)) {
+                    char *pv = PQgetvalue(res, i, j);
+                    if (pv) {
+                        av_store(av, i, newSVpvn(pv, PQgetlength(res, i, j)));
+                        continue;
+                    }
+                }
+                av_store(av, i, &PL_sv_undef);
             }
         }
         XSRETURN(cols);
     }
 
 
-int PQgetisnull(PGresult *res, int row_number, int column_number);
-ALIAS:
-    null = 0
-
 int PQgetlength(PGresult *res, int row_number, int column_number);
 ALIAS:
     valueLength = 0
 
+int PQnparams(const PGresult *res)
+ALIAS:
+    nParams = 0
+
+Oid PQparamtype(const PGresult *res, int param_number)
+ALIAS:
+    paramType = 0
+
+
 # void PQprint(FILE *fout, PGresult *res, PQprintOpt *po);
 
-char *PQcmdStatus(PGresult *res);
+char *PQcmdStatus(PGresult *res)
 
-char *PQcmdTuples(PGresult *res);
+SV *PQcmdTuples(PGresult *res)
+ALIAS:
+    cmdRows = 0
+PREINIT:
+    char *pv;
+CODE:
+    pv = PQcmdTuples(res);
+    if (!pv or !pv[0])
+        RETVAL = &PL_sv_undef;
+    else
+        RETVAL = newSVpv(pv, 0);
 
-Oid PQoidValue(PGresult *res);
-
+Oid PQoidValue(PGresult *res)
 
 MODULE = Pg::PQ		PACKAGE = Pg::PQ::Cancel          PREFIX=PQ
 
 
 void PQfreeCancel(PGcancel *cancel);
+POSTCALL:
+    sv_setsv(SvRV(ST(0)), &PL_sv_undef);
 
-int PQcancel(PGcancel *cancel, char *errbuf, int errbufsize);
-
+SV *
+PQcancel(PGcancel *cancel)
+PREINIT:
+    int r;
+    char buf[256];
+CODE:
+    r = PQcancel(cancel, buf, 256);
+    if (r)
+        RETVAL = &PL_sv_yes;
+    else {
+        RETVAL = newSVpv(buf, 0);
+        SvUPGRADE(RETVAL, SVt_PVIV);
+        SvIOK_on(RETVAL);
+        SvIV_set(0);
+    }
+            
