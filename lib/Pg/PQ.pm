@@ -1,6 +1,6 @@
 package Pg::PQ;
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 use 5.010001;
 use strict;
@@ -18,14 +18,27 @@ $EXPORT_TAGS{all} = [@EXPORT_OK];
 package Pg::PQ::Conn;
 use Carp;
 
-sub new {
-    my $class = shift;
-    connectdb(@_);
+sub _escape_opt {
+    my $n = shift;
+    $n =~ s/(['\\])/\\$1/g;
+    $n = "'$n'" if $n =~ /\s/;
+}
+
+sub _make_conninfo {
+    my @conninfo = (@_ & 1 ? shift : ());
+    my %opts = @_;
+    push @conninfo, map _escape_opt($_).'='._escape_opt($opts{$_}), keys %opts;
+    join ' ', @conninfo;
 }
 
 sub start {
-    my $class = shift;
-    connectStart(@_);
+    shift; # discards class
+    connectdb(_make_conninfo @_)
+}
+
+sub new {
+    shift;
+    connectdb(_make_conninfo @_);
 }
 
 sub DESTROY {
@@ -82,8 +95,24 @@ Pg::PQ - Perl wrapper for PostgreSQL libpq
 
 =head1 SYNOPSIS
 
-  use Pg::PQ qw(:);
-  my $dbc = Pg::PQ::Conn->new("dbname=test host=dbserver");
+  use Pg::PQ qw(:pgres_polling);
+
+  my $dbc = Pg::PQ::Conn->new(dbname => 'test',
+                              host => 'dbserver');
+
+  $dbc->sendQuery("select * from foo");
+
+  while (1) {
+    $dbc->consumeInput;
+    last unless $dbc->busy
+    # do something else
+    ...
+  }
+
+  my $res = $dbc->result;
+  my @rows = $res->rows;
+
+  print "query result:\n", Dumper \@rows;
 
 =head1 DESCRIPTION
 
@@ -100,9 +129,6 @@ Its main purpose is to let query a PostgreSQL database asynchronously
 from inside common non-blocking frameworks as L<AnyEvent>, L<POE> or
 even L<Coro>.
 
-Besides that, feel free to do anything you want that can be done with
-libpq but not by L<DBD::Pg>.
-
 =head2 Pg::PQ::Conn class
 
 These are the methods available from the class Pg::PQ::Conn:
@@ -111,10 +137,25 @@ These are the methods available from the class Pg::PQ::Conn:
 
 =item $dbc = Pg::PQ::Conn->new($conninfo)
 
-Creates a new Pg::PQ::Conn and connects to the database defined by the
-parameters given in C<$conninfo>.
+=item $dbc = Pg::PQ::Conn->new(%conninfo)
 
-Accepted parameters:
+I<(wraps PQconnectdb)>
+
+This method creates a new Pg::PQ::Conn object and connects to the
+database defined by the parameters given as a string (C<$conninfo>) or
+as a set of key value pairs (C<%conninfo>).
+
+For example:
+
+  # parameters as an string:
+  my $dbc = Pg::PQ::Conn->new("dbname=testdb user=jsmith passwd=jsmith11");
+
+  # as key-value pairs:
+  my $dbc = Pg::PQ::Conn->new(dbname => 'testdb',
+                              user   => 'jsmith',
+                              passwd => 'jsmith11');
+
+The set of parameters accepted is as follows:
 
 =over 4
 
@@ -203,11 +244,13 @@ recommended to use a timeout of less than 2 seconds.
 =item options
 
 Adds command-line options to send to the server at run-time. For
-example, setting this to -c geqo=off sets the session's value of the
-geqo parameter to off. For a detailed discussion of the available
-options, consult Chapter 18.  application_name
+example, setting this to C<-c geqo=off> sets the session's value of
+the geqo parameter to off. For a detailed discussion of the available
+options, consult Chapter 18 of the PostgreSQL documentation.
 
-Specifies a value for the application_name configuration parameter.
+=item application_name
+
+Specifies a value for the C<application_name> configuration parameter.
 
 =item fallback_application_name
 
@@ -353,57 +396,43 @@ parameters. This allows applications to specify only a service name so
 connection parameters can be centrally maintained. See Section 31.15
 of the PostgreSQL documentation.
 
+=back
+
 If any parameter is unspecified, then the corresponding environment
 variable (see Section 31.13 of the PostgreSQL documentation) is
 checked. If the environment variable is not set either, then the
 indicated built-in defaults are used.
 
-If C<expand_dbname> is non-zero and dbname contains an C<=> sign, it
-is taken as a conninfo string in exactly the same way as if it had
-been passed to PQconnectdb(see below). Previously processed key words
-will be overridden by key words in the conninfo string.
-
-In general key words are processed from the beginning of these arrays
-in index order. The effect of this is that when key words are
-repeated, the last processed value is retained. Therefore, through
-careful placement of the dbname key word, it is possible to determine
-what may be overridden by a conninfo string, and what may not.
-
-=back
-
 See also
 L<http://www.postgresql.org/docs/9.0/interactive/libpq-connect.html>.
 
-Example:
-
-  my $dbc = Pg::PQ::Conn->new("dbname=testdb user=jsmith passwd=jsmith11");
-
-I<(This method wraps PQconnectdb)>
-
 =item $dbc = Pg::PQ::Conn->start($conninfo)
 
-Similar to C<new> but returns inmediately without waiting for the
-network connection to the database and the protocol handshake to be
-completed.
+I<(wraps PQconnectStart)>
 
-This method combined with C<pollStart> described below allows to
-establish database connections asynchronously.
+This method is similar to L</new> but returns inmediately, without
+waiting for the network connection to the database or the protocol
+handshake to be completed.
 
-I<(This method wraps PQconnectStart)>
+Combined with L</pollStart> described below allows to establish
+database connections asynchronously (see L</Non-blocking connecting to
+the database>).
 
 =item $poll_status = $dbc->connectPoll
 
-Returns the polling status when connecting asynchronously to a
-database. Returns any of the C<pgres_polling> constants (see
-L</Constants> bellow). I<This method wraps PQconnectPoll>.
+I<(wraps PQconnectPoll)>
 
-This method combined with C<start> are used to open a connection to a
+This method returns the polling status when connecting asynchronously
+to a database. Returns any of the L</pgres_polling> constants (see
+L</Constants> bellow).
+
+This method combined with L</start> are used to open a connection to a
 database server such that your application's thread of execution is
 not blocked on remote I/O whilst doing so. The point of this approach
 is that the waits for I/O to complete can occur in the application's
-main loop, rather than down inside PQconnectdbParams or PQconnectdb,
-and so the application can manage this operation in parallel with
-other activities.
+main loop, rather than down inside L</start> and so the application
+can manage this operation in parallel with other activities (see
+L</Non-blocking connecting to the database>).
 
 Neither C<start> nor C<connectPoll> will block, so long as a number of
 restrictions are met:
@@ -418,13 +447,14 @@ documentation of these parameters under L</new> above for details.
 
 =item *
 
-If you call C<trace>, ensure that the stream object into which you
+If you call L</trace>, ensure that the stream object into which you
 trace will not block.
 
 =item *
 
 You ensure that the socket is in the appropriate state before calling
-C<connectPoll>, as described in L</Non-blocking database access>.
+C<connectPoll>, as described in L</Non-blocking connecting to the
+database>.
 
 =back
 
@@ -581,16 +611,18 @@ Returns the error message most recently generated by an operation on
 the connection.
 
 Nearly all libpq functions will set a message for C<errorMessage> if
-they fail. Note that by libpq convention, a nonempty C<errorMessage>
-result can be multiple lines.
+they fail. Error messages can be multiline.
+
+Note that the returned string will not contain any trailing newline
+character (as the libpq C version does).
 
 =item $dbc->socket
 
 Obtains the file descriptor number of the connection socket to the
 server. A valid descriptor will be greater than or equal to 0; a
-result of -1 indicates that no server connection is currently
-open. (This will not change during normal operation, but could change
-during connection setup or reset.)
+result of -1 indicates that no server connection is currently open
+(this will not change during normal operation, but could change during
+connection setup or reset).
 
 =item $dbc->backendPID
 
@@ -621,7 +653,8 @@ connection attempt to detect whether the server demanded a password.
 =item $dbc->finish
 
 Closes the connection to the server and frees the underlaying libpq
-PGconn data structure. This method is automatically called by C<DESTROY>.
+PGconn data structure. This method is automatically called by
+C<DESTROY> so usually there is no need to call it explicitly.
 
 =item $dbc->reset
 
@@ -634,37 +667,43 @@ a working connection is lost.
 
 =item $dbc->resetPoll
 
-Reset the communication channel to the server, in a nonblocking manner.
+Reset the communication channel to the server, in a non-blocking
+manner.
 
 These functions will close the connection to the server and attempt to
 reestablish a new connection to the same server, using all the same
 parameters previously used. This can be useful for error recovery if a
-working connection is lost. They differ from C<reset> (above) in that
-they act in a nonblocking manner. These functions suffer from the same
-restrictions as C<start> and C<connectPoll>.
+working connection is lost. They differ from L</reset> in that
+they act in a non-blocking manner. These functions suffer from the
+same restrictions as L</start> and L</connectPoll>.
 
 To initiate a connection reset, call C<resetStart>. If it returns 0,
 the reset has failed. If it returns 1, poll the reset using
 C<resetPoll> in exactly the same way as you would create the
 connection using C<connectPoll>.
 
-=item $dbc->trace
+=item $dbc->trace($fh)
 
-# FIXME
+Enables tracing of the client/server communication to a debugging file
+handle. For instance:
+
+  $dbc->trace(*STDERR);
 
 =item $dbc->untrace
 
-# FIXME
+Disables tracing started by L</trace>.
 
 =item $dbc->execQuery
 
-Submits a command to the server and waits for the result.
+I<(wraps PQexec and PQexecParams)>
 
-Returns a Pg::PQ::Result object or undef. A valid object will
+This method submits a command to the server and waits for the result.
+
+Returns a Pg::PQ::Result object or C<undef>. A valid object will
 generally be returned except in out-of-memory conditions or serious
 errors such as inability to send the command to the server. If
 C<undef> is returned, it should be treated like a C<PGRES_FATAL_ERROR>
-result. Use C<errorMessage> to get more information about such errors.
+result. Use L</errorMessage> to get more information about such errors.
 
 It is allowed to include multiple SQL commands (separated by
 semicolons) in the command string. Multiple queries sent in a single
@@ -672,9 +711,11 @@ C<execQuery> call are processed in a single transaction, unless there
 are explicit C<BEGIN>/C<COMMIT> commands included in the query string
 to divide it into multiple transactions. Note however that the
 returned Pg::PQ::Result object describes only the result of the
-last command executed from the string. Should one of the commands
-fail, processing of the string stops with it and the returned
-Pg::PQ::Result object describes the error condition.
+last command executed from the string.
+
+Should one of the commands fail, processing of the string stops with
+it and the returned Pg::PQ::Result object describes the error
+condition.
 
 =item $res = $dbc->prepare($name => $query)
 
@@ -682,46 +723,48 @@ Submits a request to create a prepared statement with the given
 parameters, and waits for completion.
 
 C<prepare> creates a prepared statement for later execution with
-C<execQueryPrepared>. This feature allows commands that will be used
+L</execQueryPrepared>. This feature allows commands that will be used
 repeatedly to be parsed and planned just once, rather than each time
 they are executed. C<prepare> is supported only in protocol 3.0 and
 later connections; it will fail when using protocol 2.0.
 
-The function creates a prepared statement named C<$name> from the
+The method creates a prepared statement named C<$name> from the
 C<$query> string, which must contain a single SQL command. C<$name>
 can be "" to create an unnamed statement, in which case any
 pre-existing unnamed statement is automatically replaced; otherwise it
 is an error if the statement name is already defined in the current
 session. If any parameters are used, they are referred to in the query
-as $1, $2, etc. (see C<describePrepared> for a means to find out what
+as $1, $2, etc. (see L</describePrepared> for a means to find out what
 data types were inferred).
 
-As with C<execQuery>, the result is normally a Pg::PQ::Result object
+As with L</execQuery>, the result is normally a Pg::PQ::Result object
 whose contents indicate server-side success or failure. An undefined
 result indicates out-of-memory or inability to send the command at
-all. Use C<errorMessage> to get more information about such errors.
+all. Use L</errorMessage> to get more information about such errors.
 
-Prepared statements for use with C<execQueryPrepared> can also be
+Prepared statements for use with L</execQueryPrepared> can also be
 created by executing SQL C<PREPARE> statements. Also, although there
 is no libpq function for deleting a prepared statement, the SQL
 C<DEALLOCATE> statement can be used for that purpose.
 
 =item $res = $dbc->execQueryPrepared($name => @args)
 
-Sends a request to execute a prepared statement with given parameters,
-and waits for the result.
+I<(wraps PQexecPrepared)>
 
-C<execQueryPrepared> is like C<exec>, but the command to be executed
-is specified by naming a previously-prepared statement, instead of
-giving a query string. This feature allows commands that will be used
-repeatedly to be parsed and planned just once, rather than each time
-they are executed. The statement must have been prepared previously in
-the current session. C<execQueryPrepared> is supported only in
-protocol 3.0 and later connections; it will fail when using protocol
-2.0.
+This method sends a request to execute a prepared statement with given
+parameters, and waits for the result.
 
-The parameters are identical to C<execQueryParams>, except that the
-name of a prepared statement is given instead of a query string.
+C<execQueryPrepared> is like L</execQuery>, but the command to be
+executed is specified by naming a previously-prepared statement,
+instead of giving a query string. This feature allows commands that
+will be used repeatedly to be parsed and planned just once, rather
+than each time they are executed. The statement must have been
+prepared previously in the current session. C<execQueryPrepared> is
+supported only in protocol 3.0 and later connections; it will fail
+when using protocol 2.0.
+
+The parameters are identical to C<execQuery>, except that the name of
+a prepared statement is given instead of a query string.
 
 =item $res = $dbc->describePrepared($name)
 
@@ -735,11 +778,11 @@ and later connections; it will fail when using protocol 2.0.
 C<$name> can be "" to reference the unnamed statement, otherwise it
 must be the name of an existing prepared statement. On success, a
 Pg::PQ::Result object with status C<PGRES_COMMAND_OK> is returned. The
-functions C<nParams> and C<paramType> can be applied to this
+functions L</nParams> and L</paramType> can be applied to this
 Pg::PQ::Result object to obtain information about the parameters of
-the prepared statement, and the methods C<nFields>, C<fName>,
-C<fType>, etc provide information about the result columns (if any) of
-the statement.
+the prepared statement, and the methods L</nFields>, L</fName>,
+L<f/Type>, etc provide information about the result columns (if any)
+of the statement.
 
 =item $res = $dbc->describePortal($portalName)
 
@@ -755,45 +798,46 @@ when using protocol 2.0.
 
 C<$name> can be "" to reference the unnamed portal, otherwise it must
 be the name of an existing portal. On success, a Pg::PQ::Result object
-with status C<PGRES_COMMAND_OK> is returned. Its methods C<nFields>,
-C<fName>, C<fType>, etc can be called to obtain information about the
+with status C<PGRES_COMMAND_OK> is returned. Its methods L</nFields>,
+L</fName>, L</fType>, etc can be called to obtain information about the
 result columns (if any) of the portal.
 
 =item $ok = $dbc->sendQuery($query, @args)
 
-Submits a command to the server without waiting for the result(s). 1
-is returned if the command was successfully dispatched and 0 if not
-(in which case, use C<errorMessage> to get more information about the
-failure).
+I<(wraps PQsendQuery and PQsendQueryParams)>
 
-After successfully calling C<sendQuery>, call C<getResult> one or more
-times to obtain the results.
+This method submits a query to the server without waiting for the
+result(s). 1 is returned if the query was successfully dispatched and
+0 if not (in which case, use L</errorMessage> to get more information
+about the failure).
+
+After successfully calling C<sendQuery>, call L</result> one or
+more times to obtain the results.
 
 C<sendQuery cannot be called again on the same connection until
-C<getResult> has returned C<undef>, indicating that the command is
-done.
+C<result> has returned C<undef>, indicating that the command is done.
 
 =item $ok = $dbc->sendPrepare($name => $query)
 
 Sends a request to create a prepared statement without waiting for
 completion.
 
-This is an asynchronous version of C<prepare>. It returns 1 if it was
+This is an asynchronous version of L</prepare>. It returns 1 if it was
 able to dispatch the request, and 0 if not. After a successful call,
-call C<getResult> to determine whether the server successfully created
+call L</result> to determine whether the server successfully created
 the prepared statement.
 
-Like C<prepare>, it will not work on 2.0-protocol connections.
+Like L</prepare>, it will not work on 2.0-protocol connections.
 
 =item $ok = $dbc->sendQueryPrepared($name, @args)
 
 Sends a request to execute a prepared statement with given parameters,
 without waiting for the result(s).
 
-This is similar to C<sendQuery>, but the command to be executed is
+This is similar to L</sendQuery>, but the command to be executed is
 specified by naming a previously-prepared statement, instead of giving
 a query string. The function's parameters are handled identically to
-C<execQueryPrepared>.
+L</execQueryPrepared>.
 
 It will not work on 2.0-protocol connections.
 
@@ -802,9 +846,9 @@ It will not work on 2.0-protocol connections.
 Submits a request to obtain information about the specified prepared
 statement, without waiting for completion.
 
-This is an asynchronous version of C<describePrepared>: it returns 1
+This is an asynchronous version of L</describePrepared>: it returns 1
 if it was able to dispatch the request, and 0 if not. After a
-successful call, call C<getResult> to obtain the results.
+successful call, call L</result> to obtain the results.
 
 It will not work on 2.0-protocol connections.
 
@@ -813,30 +857,33 @@ It will not work on 2.0-protocol connections.
 Submits a request to obtain information about the specified portal,
 without waiting for completion.
 
-This is an asynchronous version of C<describePortal>: it returns 1 if
+This is an asynchronous version of L</describePortal>: it returns 1 if
 it was able to dispatch the request, and 0 if not. After a successful
-call, call C<getResult> to obtain the results.
+call, call L</result> to obtain the results.
 
 It will not work on 2.0-protocol connections.
 
 =item $res = $dbc->result
 
-Waits for the next result from a prior C<sendQuery>, C<sendPrepare>,
-C<sendQueryPrepared>, C<sendDescribePrepare> or C<sendDescribePortal>
-method call, and returns it. C<undef> is returned when the
-command is complete and there will be no more results.
+I<(wraps PQgetResult)>
+
+This method waits for the next result from a prior L</sendQuery>,
+L</sendPrepare>, L</sendQueryPrepared>, L</sendDescribePrepare> or
+L</sendDescribePortal> method call, and returns it. L</undef> is
+returned when the command is complete and there will be no more
+results.
 
 C<result> must be called repeatedly until it returns C<undef>
 indicating that the command is done (if called when no command is
 active, C<result> will just return C<undef> at once).
 
-Each non undefined result from C<getResult> should be processed using
+Each non undefined result from C<result> should be processed using
 the accessor methods for the Pg::PQ::Result class described below.
 
 Note that C<result> will block only if a command is active and the
-necessary response data has not yet been read by C<consumeInput>.
+necessary response data has not yet been read by L</consumeInput>.
 
-Using C<sendQuery> and C<result> solves one of C<exec>'s problems: if
+Using C<sendQuery> and C<result> solves one of L</exec>'s problems: if
 a command string contains multiple SQL commands, the results of those
 commands can be obtained individually.
 
@@ -846,19 +893,19 @@ still working on later queries in the same command string.
 
 However, calling C<result> will still cause the client to block until the
 server completes the next SQL command. This can be avoided by proper
-use of the C<consumeInput> and C<busy> methods described next.
+use of the C<consumeInput> and L</busy> methods described next.
 
 =item $ok = $dbc->consumeInput
 
 If input is available from the server, consume it.
 
 C<consumeInput> normally returns 1 indicating "no error", but returns
-0 if there was some kind of trouble (in which case C<errorMessage> can
+0 if there was some kind of trouble (in which case L</errorMessage> can
 be consulted). Note that the result does not say whether any input
 data was actually collected.
 
-After calling C<consumeInput>, the application can check C<busy>
-and/or C<notifies> to see if their state has changed.
+After calling C<consumeInput>, the application can check L</busy>
+and/or L</notifies> to see if their state has changed.
 
 C<consumeInput> can be called even if the application is not prepared
 to deal with a result or notification just yet. The method will read
@@ -867,12 +914,12 @@ read-ready indication to go away.
 
 =item $ok = $dbc->busy
 
-Returns 1 if a command is busy, that is, C<result> would block waiting
+Returns 1 if a command is busy, that is, L</result> would block waiting
 for input. A 0 return indicates that C<result> can be called with
 assurance of not blocking.
 
 C<busy> will not itself attempt to read data from the server;
-therefore C<consumeInput> must be invoked first, or the busy state
+therefore L</consumeInput> must be invoked first, or the busy state
 will never end.
 
 =item $nb = $dbc->nonBlocking
@@ -933,7 +980,7 @@ is stored in the connection object.
 
 =item $esc = $dbc->escapeString($str)
 
-C<escapeString> escapes string literals, much like C<escapeLiteral>
+C<escapeString> escapes string literals, much like L</escapeLiteral>
 but it does not generate the single quotes that must surround
 PostgreSQL string literals; they should be provided in the SQL command
 that the result is inserted into.
@@ -958,35 +1005,36 @@ C<$status> can take one of the following values:
 
 =item PGRES_EMPTY_QUERY
 
-The string sent to the server was empty. 
+The string sent to the server was empty.
 
 =item PGRES_COMMAND_OK
 
-Successful completion of a command returning no data. 
+Successful completion of a command returning no data.
 
 =item PGRES_TUPLES_OK
 
-Successful completion of a command returning data (such as a SELECT or SHOW). 
+Successful completion of a command returning data (such as a SELECT or
+SHOW).
 
 =item PGRES_COPY_OUT
 
-Copy Out (from server) data transfer started. 
+Copy Out (from server) data transfer started.
 
 =item PGRES_COPY_IN
 
-Copy In (to server) data transfer started. 
+Copy In (to server) data transfer started.
 
 =item PGRES_BAD_RESPONSE
 
-The server's response was not understood. 
+The server's response was not understood.
 
 =item PGRES_NONFATAL_ERROR
 
-A nonfatal error (a notice or warning) occurred. 
+A nonfatal error (a notice or warning) occurred.
 
 =item PGRES_FATAL_ERROR
 
-A fatal error occurred. 
+A fatal error occurred.
 
 =back
 
@@ -1000,7 +1048,7 @@ never return rows (C<INSERT>, C<UPDATE>, etc.). A response of
 C<PGRES_EMPTY_QUERY> might indicate a bug in the client software.
 
 A result of status C<PGRES_NONFATAL_ERROR> will never be returned
-directly by C<exec> or other query execution methods; results of this
+directly by L</exec> or other query execution methods; results of this
 kind are instead passed to the notice processor (see Section 31.11).
 
 # FIXME: revise last paragraph notice processor reference.
@@ -1519,8 +1567,9 @@ if any notifications came in during the processing of the command.
 
 =head1 SEE ALSO
 
-Most of the time you would prefer to use L<DBD::Pg> through L<DBI> (the
-standard Perl database access module) to PostgreSQL databases.
+Most of the time you would prefer to use L<DBD::Pg> through L<DBI>
+(the standard Perl database interface module) to access PostgreSQL
+databases.
 
 L<AnyEvent::Pg> integrates Pg::PQ under the L<AnyEvent> framework.
 
@@ -1530,23 +1579,58 @@ layer on top of libpq, and probably the documentation corresponding to
 the version of libpq installed on your machine would actually be more
 accurate in some aspects than that included here.
 
+=head1 TODO
+
+=over 4
+
+=item *
+
+Supoprt binary data transfer.
+
+=item *
+
+Wrap the COPY API.
+
+=item *
+
+Non-blocking cancels.
+
+=item *
+
+Write a test suite.
+
+=back
+
 =head1 BUGS AND SUPPORT
 
 This is a very early release that may contain lots of bugs.
 
-Send bug reports by email or using the cpan bug tracker at
-L<http://rt.cpan.org>.
+Send bug reports by email or using the CPAN bug tracker at
+L<https://rt.cpan.org/Dist/Display.html?Status=Active&Queue=Pg-PQ>.
+
+=head2 Known bugs and limitations
+
+=item *
+
+Currently all the data is transferred as text, that means that strings
+are truncated at the first '\0' character.
+
+=item *
+
+Currently the utf-8 encoding is hard-coded into the wrapper. Talking
+to databases configured to use other encodings would produce bad data
+(and maybe even crash the application).
 
 =head2 Commercial support
 
 Commercial support, professional services and custom software
-development services around this module are available from the
-QindelGroup (L<http://qindel.com>. Just send me an email with a rough
-description of your requirements and we will get back to you ASAP.
+development services around this module are available from QindelGroup
+(L<http://qindel.com>). Send us an email with a rough description of
+your requirements and we will get back to you ASAP.
 
 =head1 AUTHOR
 
-Salvador FandiE<ntilde>o, E<lt>sfandino@yahoo.comE<gt>
+Salvador FandiE<ntilde>o E<lt>sfandino@yahoo.comE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 

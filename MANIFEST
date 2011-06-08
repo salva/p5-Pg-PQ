@@ -6,3 +6,6 @@ PQ.xs
 README
 t/Pg-PQ.t
 lib/Pg/PQ.pm
+enums.decl
+enums.h
+build_tools/gen_constants.pl
