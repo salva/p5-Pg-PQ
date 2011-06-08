@@ -1532,6 +1532,8 @@ accurate in some aspects than that included here.
 
 =head1 BUGS AND SUPPORT
 
+This is a very early release that may contain lots of bugs.
+
 Send bug reports by email or using the cpan bug tracker at
 L<http://rt.cpan.org>.
 
@@ -1539,8 +1541,8 @@ L<http://rt.cpan.org>.
 
 Commercial support, professional services and custom software
 development services around this module are available from the
-QindelGroup (L<http://qindel.com>. Just send me an email with a rough description of your
-requirements and we will get back to you ASAP.
+QindelGroup (L<http://qindel.com>. Just send me an email with a rough
+description of your requirements and we will get back to you ASAP.
 
 =head1 AUTHOR
 

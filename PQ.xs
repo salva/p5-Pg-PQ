@@ -187,9 +187,9 @@ CODE:
 OUTPUT:
     RETVAL
 
-PGcancel *PQgetCancel(PGconn *conn);
-ALIAS:
-    makeCancel = 0
+# PGcancel *PQgetCancel(PGconn *conn);
+# ALIAS:
+#    makeCancel = 0
 
 void PQnotifies(PGconn *conn)
 PREINIT:
@@ -529,11 +529,11 @@ int PQgetlength(PGresult *res, int row_number, int column_number);
 ALIAS:
     valueLength = 0
 
-int PQnparams(const PGresult *res)
+int PQnparams(PGresult *res)
 ALIAS:
     nParams = 0
 
-Oid PQparamtype(const PGresult *res, int param_number)
+Oid PQparamtype(PGresult *res, int param_number)
 ALIAS:
     paramType = 0
 
@@ -549,7 +549,7 @@ PREINIT:
     char *pv;
 CODE:
     pv = PQcmdTuples(res);
-    if (!pv or !pv[0])
+    if (!pv || !pv[0])
         RETVAL = &PL_sv_undef;
     else
         RETVAL = newSVpv(pv, 0);
@@ -557,7 +557,6 @@ CODE:
 Oid PQoidValue(PGresult *res)
 
 MODULE = Pg::PQ		PACKAGE = Pg::PQ::Cancel          PREFIX=PQ
-
 
 void PQfreeCancel(PGcancel *cancel);
 POSTCALL:
@@ -571,11 +570,11 @@ PREINIT:
 CODE:
     r = PQcancel(cancel, buf, 256);
     if (r)
-        RETVAL = &PL_sv_yes;
+        RETVAL = &PL_sv_undef;
     else {
         RETVAL = newSVpv(buf, 0);
         SvUPGRADE(RETVAL, SVt_PVIV);
         SvIOK_on(RETVAL);
-        SvIV_set(0);
+        SvIV_set(RETVAL, 1);
     }
             

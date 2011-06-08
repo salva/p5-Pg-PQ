@@ -14,7 +14,7 @@ sub print_status {
     # no warnings 'uninitialized';
     printf("conn status:\t'%s' (%d),\terr:\t'%s'\nresult status:\t'%s' (%d),\tmsg:\t'%s',\terr:\t'%s'\n",
            $dbc->status, $dbc->status, $dbc->errorMessage,
-           $dbr->status, $dbr->status, $dbr->statusString, $dbr->errorMessage);
+           $dbr->status, $dbr->status, $dbr->statusMessage, $dbr->errorMessage);
 }
 
 $dbc = Pg::PQ::Conn->new("dbname=pgpqtest");
