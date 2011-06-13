@@ -1634,6 +1634,9 @@ to databases configured to use other encodings would produce bad data
 
 =head2 Commercial support
 
+This module was implemented during the development of QVD
+(L<http://theqvd.com>) the Linux VDI platform.
+
 Commercial support, professional services and custom software
 development services around this module are available from QindelGroup
 (L<http://qindel.com>). Send us an email with a rough description of
