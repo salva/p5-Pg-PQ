@@ -4,6 +4,7 @@ MANIFEST
 ppport.h
 PQ.xs
 README
+t/load.t
 t/Pg-PQ.t
 lib/Pg/PQ.pm
 enums.decl

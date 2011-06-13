@@ -1,5 +1,9 @@
 Revision history for Perl extension Pg::PQ.
 
+0.04
+	- add conditional code to leave out methods not available from
+          libpq 8.x.x when this version of the client library is used
+
 0.03  Jun 9, 2011
         - several doc improvements
         - include typemap file in distribution

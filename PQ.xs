@@ -234,6 +234,8 @@ CODE:
 OUTPUT:
     RETVAL
 
+#if PQMAJOR >= 9
+
 char *PQescapeLiteral(PGconn *conn, const char *str, size_t length(str))
 CLEANUP:
     if (RETVAL) PQfreemem(RETVAL);
@@ -241,6 +243,8 @@ CLEANUP:
 char *PQescapeIdentifier(PGconn *conn, const char *str, size_t length(str))
 CLEANUP:
     if (RETVAL) PQfreemem(RETVAL);
+
+#endif
 
 # unsigned char *PQescapeByteaConn(PGconn *conn, unsigned char *from, size_t from_length, size_t *to_length);
 
