@@ -1,5 +1,9 @@
 Revision history for Perl extension Pg::PQ.
 
+0.05
+        - start was calling PQconnectdb instead of PQconnectStart
+          under the hood
+
 0.04  Jun 13, 2011
 	- add conditional code to leave out methods not available from
           libpq 8.x.x when this version of the client library is used

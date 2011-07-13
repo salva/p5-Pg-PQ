@@ -33,7 +33,7 @@ sub _make_conninfo {
 
 sub start {
     shift; # discards class
-    connectdb(_make_conninfo @_)
+    connectStart(_make_conninfo @_)
 }
 
 sub new {
