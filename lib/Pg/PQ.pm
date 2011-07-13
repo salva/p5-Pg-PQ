@@ -25,8 +25,14 @@ sub _escape_opt {
 }
 
 sub _make_conninfo {
-    my @conninfo = (@_ & 1 ? shift : ());
-    my %opts = @_;
+    my (%opts, @conninfo);
+    if (@_ == 1 and $_[0] eq 'HASH') {
+        %opts = %{$_[0]}
+    }
+    else {
+        $conninfo[0] = shift @_ if @_ & 1;
+        %opts = @_;
+    }
     push @conninfo, map _escape_opt($_).'='._escape_opt($opts{$_}), keys %opts;
     join ' ', @conninfo;
 }
@@ -138,6 +144,8 @@ These are the methods available from the class Pg::PQ::Conn:
 =item $dbc = Pg::PQ::Conn->new($conninfo)
 
 =item $dbc = Pg::PQ::Conn->new(%conninfo)
+
+=item $dbc = Pg::PQ::Conn->new(\%conninfo)
 
 X<new>I<(wraps PQconnectdb)>
 
@@ -407,6 +415,10 @@ See also
 L<http://www.postgresql.org/docs/9.0/interactive/libpq-connect.html>.
 
 =item $dbc = Pg::PQ::Conn->start($conninfo)
+
+=item $dbc = Pg::PQ::Conn->start(%conninfo)
+
+=item $dbc = Pg::PQ::Conn->start(\%conninfo)
 
 X<start>I<(wraps PQconnectStart)>
 
