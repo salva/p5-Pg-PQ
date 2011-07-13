@@ -1,6 +1,7 @@
 Revision history for Perl extension Pg::PQ.
 
 0.05
+        - accept a hash ref as conninfo
         - start was calling PQconnectdb instead of PQconnectStart
           under the hood
 
