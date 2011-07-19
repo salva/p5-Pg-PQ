@@ -22,11 +22,12 @@ sub _escape_opt {
     my $n = shift;
     $n =~ s/(['\\])/\\$1/g;
     $n = "'$n'" if $n =~ /\s/;
+    $n;
 }
 
 sub _make_conninfo {
     my (%opts, @conninfo);
-    if (@_ == 1 and $_[0] eq 'HASH') {
+    if (@_ == 1 and ref $_[0] eq 'HASH') {
         %opts = %{$_[0]}
     }
     else {
@@ -34,6 +35,7 @@ sub _make_conninfo {
         %opts = @_;
     }
     push @conninfo, map _escape_opt($_).'='._escape_opt($opts{$_}), keys %opts;
+    # warn "conninfo: >@conninfo<\n";
     join ' ', @conninfo;
 }
 
