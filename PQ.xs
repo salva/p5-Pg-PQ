@@ -557,6 +557,8 @@ CODE:
         RETVAL = &PL_sv_undef;
     else
         RETVAL = newSVpv(pv, 0);
+OUTPUT:
+    RETVAL
 
 Oid PQoidValue(PGresult *res)
 
@@ -581,4 +583,6 @@ CODE:
         SvIOK_on(RETVAL);
         SvIV_set(RETVAL, 1);
     }
+OUTPUT:
+    RETVAL
             
