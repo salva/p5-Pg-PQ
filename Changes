@@ -1,5 +1,8 @@
 Revision history for Perl extension Pg::PQ.
 
+0.06
+        - OUTPUT directive was missing from PQcmdTuples wrapper
+
 0.05  Jul 18, 2001
         - accept a hash ref as conninfo
         - start was calling PQconnectdb instead of PQconnectStart
