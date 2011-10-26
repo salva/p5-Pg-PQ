@@ -123,11 +123,12 @@ for my $enum (sort keys %enum) {
     defined $ver and print O $ver;
 
     my $len = @{$enum{$enum}};
+    my $start = $enum{$enum}[0] || 0;
     print O <<ETS;
 static SV *
 ${enum}2sv(I32 ix) {
     SV *sv;
-    ix -= $enum{$enum}[0];
+    ix -= $start;
     if ((ix < 0) || (ix >= $len)) {
         return newSViv(ix);
     }

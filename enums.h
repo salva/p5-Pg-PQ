@@ -104,7 +104,7 @@ ExecStatusType2sv(I32 ix) {
 static SV *
 PGDiag2sv(I32 ix) {
     SV *sv;
-    ix -= ;
+    ix -= 0;
     if ((ix < 0) || (ix >= 0)) {
         return newSViv(ix);
     }
