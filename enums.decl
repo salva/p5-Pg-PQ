@@ -1,5 +1,5 @@
 
-enum CopyResultFlag => copyres
+enum CopyResultFlag => copyres if 8.4
 
     # s/PG_COPYRES/COPYRES/
     s/COPYRESULTFLAG/PG_COPYRES/

@@ -6,8 +6,11 @@
  */
 
 SV *enum2sv_ConnStatusType[9];
+#if PG_VERSION_NUM >= 80400
 SV *enum2sv_CopyResultFlag[9];
+#endif
 SV *enum2sv_ExecStatusType[8];
+SV *enum2sv_PGDiag[0];
 SV *enum2sv_PGTransactionStatusType[5];
 SV *enum2sv_PGVerbosity[3];
 SV *enum2sv_PostgresPollingStatusType[5];
@@ -24,6 +27,7 @@ init_constants(void) {
     enum2sv_ConnStatusType[7] = make_constant("CONNECTION_SSL_STARTUP", 22, CONNECTION_SSL_STARTUP, "connection");
     enum2sv_ConnStatusType[8] = make_constant("CONNECTION_NEEDED", 17, CONNECTION_NEEDED, "connection");
 
+#if PG_VERSION_NUM >= 80400
     enum2sv_CopyResultFlag[0] = make_constant("PG_COPYRES_0", 12, 0, "copyres");
     enum2sv_CopyResultFlag[1] = make_constant("PG_COPYRES_ATTRS", 16, PG_COPYRES_ATTRS, "copyres");
     enum2sv_CopyResultFlag[2] = make_constant("PG_COPYRES_TUPLES", 17, PG_COPYRES_TUPLES, "copyres");
@@ -33,6 +37,7 @@ init_constants(void) {
     enum2sv_CopyResultFlag[6] = make_constant("PG_COPYRES_6", 12, 6, "copyres");
     enum2sv_CopyResultFlag[7] = make_constant("PG_COPYRES_7", 12, 7, "copyres");
     enum2sv_CopyResultFlag[8] = make_constant("PG_COPYRES_NOTICEHOOKS", 22, PG_COPYRES_NOTICEHOOKS, "copyres");
+#endif
 
     enum2sv_ExecStatusType[0] = make_constant("PGRES_EMPTY_QUERY", 17, PGRES_EMPTY_QUERY, "pgres");
     enum2sv_ExecStatusType[1] = make_constant("PGRES_COMMAND_OK", 16, PGRES_COMMAND_OK, "pgres");
@@ -42,6 +47,7 @@ init_constants(void) {
     enum2sv_ExecStatusType[5] = make_constant("PGRES_BAD_RESPONSE", 18, PGRES_BAD_RESPONSE, "pgres");
     enum2sv_ExecStatusType[6] = make_constant("PGRES_NONFATAL_ERROR", 20, PGRES_NONFATAL_ERROR, "pgres");
     enum2sv_ExecStatusType[7] = make_constant("PGRES_FATAL_ERROR", 17, PGRES_FATAL_ERROR, "pgres");
+
 
     enum2sv_PGTransactionStatusType[0] = make_constant("PQTRANS_IDLE", 12, PQTRANS_IDLE, "pqtrans");
     enum2sv_PGTransactionStatusType[1] = make_constant("PQTRANS_ACTIVE", 14, PQTRANS_ACTIVE, "pqtrans");
@@ -71,6 +77,7 @@ ConnStatusType2sv(I32 ix) {
     return sv;
 }
 
+#if PG_VERSION_NUM >= 80400
 static SV *
 CopyResultFlag2sv(I32 ix) {
     SV *sv;
@@ -81,6 +88,7 @@ CopyResultFlag2sv(I32 ix) {
     sv = newSVsv(enum2sv_CopyResultFlag[ix]);
     return sv;
 }
+#endif
 
 static SV *
 ExecStatusType2sv(I32 ix) {
@@ -90,6 +98,17 @@ ExecStatusType2sv(I32 ix) {
         return newSViv(ix);
     }
     sv = newSVsv(enum2sv_ExecStatusType[ix]);
+    return sv;
+}
+
+static SV *
+PGDiag2sv(I32 ix) {
+    SV *sv;
+    ix -= ;
+    if ((ix < 0) || (ix >= 0)) {
+        return newSViv(ix);
+    }
+    sv = newSVsv(enum2sv_PGDiag[ix]);
     return sv;
 }
 

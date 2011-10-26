@@ -8,6 +8,7 @@ open O, "> enums.h" or die "unable to open enums.c";
 
 my %enum;
 my %tag;
+my %ver;
 my @s;
 my $c;
 my $last = 0;
@@ -15,11 +16,15 @@ while(<E>) {
     s|/\*.*/||;
     s|^\s\* .*||;
     s|^.*\*/||;
-    if (my ($name, $tag) = /^enum\s*(\w+)\s*(?:=>\s*(\w+))?/) {
+    if (my ($name, $tag, $ver) = /^enum\s*(\w+)\s*(?:=>\s*(\w+))?(?:\s+if\s+(\d+\.(?:\d+(?:\.\d+)?)?))?/) {
         $last = 0;
 	# $name =~ s/^ldap_//;
 	$c = $enum{$name} = [];
         $tag{$name} = $tag;
+        if (defined $ver) {
+            $ver =~ /^(\d+)(?:\.(\d+)(?:\.(\d+))?)?$/ or die "bad version number $ver";
+            $ver{$name} = sprintf("#if PG_VERSION_NUM >= %d%02d%02d\n", $1, $2 || 0, $3 || 0)
+        }
     }
     elsif (/^\s*((?:P[QG]|CONN)\w+)\s*=\s*(\d+),/) {
         $c->[$2] = $1;
@@ -48,8 +53,11 @@ print O <<HEAD;
 HEAD
 
 for my $enum (sort keys %enum) {
+    my $ver = $ver{$enum};
+    defined $ver and print O $ver;
     my $len = @{$enum{$enum}};
     print O "SV *enum2sv_${enum}[$len];\n";
+    defined $ver and print O "#endif\n";
 }
 
 # print O <<DECL for @c;
@@ -65,6 +73,9 @@ INIT
 for my $enum (sort keys %enum) {
     my $c = $enum{$enum};
     my $tag = $tag{$enum};
+    my $ver = $ver{$enum};
+
+    defined $ver and print O $ver;
 
     if (defined $tag and length $tag) {
         $tag = qq("$tag");
@@ -98,6 +109,8 @@ for my $enum (sort keys %enum) {
 C
 
     }
+    defined $ver and print O "#endif\n";
+
     print O "\n";
 }
 
@@ -106,6 +119,9 @@ print O <<END;
 END
 
 for my $enum (sort keys %enum) {
+    my $ver = $ver{$enum};
+    defined $ver and print O $ver;
+
     my $len = @{$enum{$enum}};
     print O <<ETS;
 static SV *
@@ -118,6 +134,7 @@ ${enum}2sv(I32 ix) {
     sv = newSVsv(enum2sv_${enum}[ix]);
     return sv;
 }
-
 ETS
+    defined $ver and print O "#endif\n";
+    print O "\n";
 }
