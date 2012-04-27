@@ -60,7 +60,7 @@ T_MY_ENUM
         $arg = ${ntype}2sv($var);
 
 T_UTF8
-        $arg = newSVpvn_utf8($var, strlen($var), 1);
+        $arg = my_newSVpv_utf8(aTHX_ ($var));
 
 T_OID
         $arg = (($var == InvalidOid) ? &PL_sv_undef : newSViv($var));

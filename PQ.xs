@@ -33,6 +33,11 @@
 /* } */
 
 static SV *
+my_newSVpv_utf8(pTHX_ const char *str) {
+    return (str ? newSVpvn_utf8(str, strlen(str), 1) : &PL_sv_undef); 
+}
+
+static SV *
 make_constant(char *name, STRLEN l, U32 value, char *tag) {
     SV *sv = newSV(0);
     SvUPGRADE(sv, SVt_PVIV);
