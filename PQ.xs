@@ -343,7 +343,7 @@ CLEANUP:
 
 char *PQresultErrorField(PGresult *res, char field);
 ALIAS:
-    errorField = 0
+    _errorField = 0
 CLEANUP:
     sv_chomp(ST(0));
 

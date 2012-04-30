@@ -16,7 +16,6 @@ our @EXPORT_OK = map @$_, values %EXPORT_TAGS;
 $EXPORT_TAGS{all} = [@EXPORT_OK];
 
 package Pg::PQ::Conn;
-use Carp;
 
 sub _escape_opt {
     my $n = shift;
@@ -54,31 +53,38 @@ sub DESTROY {
     $self->finish if $$self;
 }
 
-sub getssl { croak "Pg::PQ::Conn::getssl not implemented" }
+sub getssl { Carp::croak("Pg::PQ::Conn::getssl not implemented") }
 
 package Pg::PQ::Result;
 
-my %error_fields = qw( severity            S
-                       sqlstate            C
-                       message_primary     M
-                       message_detail      D
-                       message_hint        H
-                       statement_position  P
-                       internal_position   p
-                       internal_query      q
-                       context             W
-                       source_file         F
-                       source_line         L
-                       source_function     R );
+my %error_field = qw( severity            S
+                      sqlstate            C
+                      message_primary     M
+                      message_detail      D
+                      message_hint        H
+                      statement_position  P
+                      internal_position   p
+                      internal_query      q
+                      context             W
+                      source_file         F
+                      source_line         L
+                      source_function     R );
 
 sub errorDescription {
     my $self = shift;
     my %desc;
-    for my $key (keys %error_fields) {
-	my $v = $self->errorField($error_fields{$key});
-	$desc{$key} = $v if defined $v;
+    while (my ($field, $key) = each %error_field) {
+	my $v = $self->_errorField($key);
+	$desc{$field} = $v if defined $v;
     }
     return (%desc ? \%desc : ());
+}
+
+sub errorField {
+    my ($self, $field) = @_;
+    my $key = $error_field{$field};
+    defined $key or Carp::croak("bad field name '$field'");
+    $self->_errorField($key);
 }
 
 sub DESTROY {
