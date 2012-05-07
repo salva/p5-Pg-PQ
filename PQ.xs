@@ -203,12 +203,15 @@ PPCODE:
     notice = PQnotifies(conn);
     if (notice) {
         int pid = notice->be_pid;
-        SV *name = newSVpv(notice->relname, 0);
+        SV *name = sv_2mortal(newSVpv(notice->relname, 0));
+        SV *extra = sv_2mortal(newSVpv(notice->extra, 0));
         PQfreemem(notice);
-        mPUSHs(name);
+        EXTEND(sp, 3);
+        PUSHs(name);
         if (GIMME_V == G_ARRAY) {
-            mPUSHi(pid);
-            XSRETURN(2);
+            PUSHs(sv_2mortal(newSViv(pid)));
+            PUSHs(extra);
+            XSRETURN(3);
         }
         else
             XSRETURN(1);

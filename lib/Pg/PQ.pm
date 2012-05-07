@@ -957,10 +957,14 @@ yet (this case can only occur if the connection is nonblocking).
 
 =item $dbc->notifies
 
-Returns a Pg::PQ::Notify object representing the next notification
-from a list of unhandled notification messages received from the
-server or undef if the list is empty. See L</Asynchronous
-notification> below.
+Returns the name of the next notification from the list of unhandled
+notification messages received from the server or undef if the list is
+empty. See L</Asynchronous notification> below.
+
+On list context besides the notification name, the pid of the
+originating process and the payload are also returned. For instance:
+
+  my ($name, $pid, $extra) = $dbc->notifies;
 
 =item $esc = $dbc->escapeLiteral($literal)
 
