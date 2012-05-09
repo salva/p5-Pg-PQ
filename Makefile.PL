@@ -1,7 +1,7 @@
 
 use ExtUtils::MakeMaker;
 
-`pg_config --version` =~ /PostgreSQL\s+(\d+)\.(\d+\.\d+)/i;
+`pg_config --version 2>&1` =~ /PostgreSQL\s+(\d+)\.(\d+\.\d+)/i;
 unless (defined $1 and $1 >= 8) {
     die "libpq 8.x.x or later required (".(defined $1 ? "$1.$2" : 'none')." found)\n";
 }
@@ -12,9 +12,14 @@ my $incdir = `pg_config --includedir`;
 my $libdir = `pg_config --libdir`;
 chomp($incdir, $libdir);
 
+my %prereq_pn;
+if ($ENV{AUTOMATED_TESTING}) {
+    $prereq_pm{'Test::postgresql'} = '0.09';
+}
+
 WriteMakefile( NAME          => 'Pg::PQ',
                VERSION_FROM  => 'lib/Pg/PQ.pm',
-               PREREQ_PM     => {},
+               PREREQ_PM     => \%prereq_pm;
                ABSTRACT_FROM => 'lib/Pg/PQ.pm',
                AUTHOR        => 'Salvador Fandino <sfandino@yahoo.com>',
                LIBS          => ["-lpq -L$libdir"],
