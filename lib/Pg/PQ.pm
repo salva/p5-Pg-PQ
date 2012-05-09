@@ -1,3 +1,4 @@
+
 package Pg::PQ;
 
 our $VERSION = '0.07';
@@ -31,9 +32,11 @@ sub _make_conninfo {
     }
     else {
         $conninfo[0] = shift @_ if @_ & 1;
+        $conninfo[0] = "dbname=$conninfo[0]" unless $conninfo[0] =~ /=/;
         %opts = @_;
     }
     push @conninfo, map _escape_opt($_).'='._escape_opt($opts{$_}), keys %opts;
+    push @conninfo, 'client_encoding=UTF8';
     # warn "conninfo: >@conninfo<\n";
     join ' ', @conninfo;
 }
@@ -1652,9 +1655,13 @@ are truncated at the first '\0' character.
 
 =item *
 
-Currently the utf-8 encoding is hard-coded into the wrapper. Talking
-to databases configured to use other encodings would produce bad data
-(and maybe even crash the application).
+Currently the utf-8 encoding is hard-coded into the wrapper. In
+theory, this is the *right thing to do* as postgres is able to
+convert from/to client utf8 to the server representation.
+
+But anyway, if you find some encoding related problem when connecting
+to a database configured to use a different encoding, don't hesitate
+to post a bug report on the module bug tracker!
 
 =head2 Commercial support
 
