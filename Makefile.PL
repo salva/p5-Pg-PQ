@@ -19,7 +19,7 @@ if ($ENV{AUTOMATED_TESTING}) {
 
 WriteMakefile( NAME          => 'Pg::PQ',
                VERSION_FROM  => 'lib/Pg/PQ.pm',
-               PREREQ_PM     => \%prereq_pm;
+               PREREQ_PM     => \%prereq_pm,
                ABSTRACT_FROM => 'lib/Pg/PQ.pm',
                AUTHOR        => 'Salvador Fandino <sfandino@yahoo.com>',
                LIBS          => ["-lpq -L$libdir"],
