@@ -161,7 +161,7 @@ CODE:
         int n = items - 2, i;
         char **values;
         Newx(values, n, char *);
-        for (i = 0; i < n; i++) values[i] = SvPV_nolen(ST(i + 2));
+        for (i = 0; i < n; i++) values[i] = SvPVutf8_nolen(ST(i + 2));
         RETVAL = PQexecParams(conn, command, n, NULL, (const char **)values, NULL, NULL, 0);
         Safefree(values);
     }
@@ -186,7 +186,7 @@ PREINIT:
     char **values;
 CODE:
     Newx(values, n, char *);
-    for (i = 0; i < n; i++) values[i] = SvPV_nolen(ST(i + 2));
+    for (i = 0; i < n; i++) values[i] = SvPVutf8_nolen(ST(i + 2));
     RETVAL = PQexecPrepared(conn, stmtName, n, (const char **)values, NULL, NULL, 0);
     Safefree(values);
 OUTPUT:
@@ -231,7 +231,7 @@ PREINIT:
     char *pv;
     int error;
 CODE:
-    pv = SvPV(from, len);
+    pv = SvPVutf8(from, len);
     RETVAL = newSV(len * 2 + 1);
     SvPOK_on(RETVAL);
     SvCUR_set(RETVAL, PQescapeStringConn(conn, SvPVX(RETVAL), pv, len, &error));
@@ -271,7 +271,7 @@ CODE:
         Newx(values, n, char *);
         for (i = 0; i < n; i++) {
             SV *sv = ST(i + 2);
-            values[i] = (SvOK(sv) ? SvPV_nolen(sv) : NULL);
+            values[i] = (SvOK(sv) ? SvPVutf8_nolen(sv) : NULL);
         }
         RETVAL = PQsendQueryParams(conn, command, n, NULL, (const char **)values, NULL, NULL, 0);
         Safefree(values);
@@ -293,7 +293,7 @@ PREINIT:
     char **values;
 CODE:
     Newx(values, n, char *);
-    for (i = 0; i < n; i++) values[i] = SvPV_nolen(ST(i + 2));
+    for (i = 0; i < n; i++) values[i] = SvPVutf8_nolen(ST(i + 2));
     RETVAL = PQsendQueryPrepared(conn, stmtName, n, (const char **)values, NULL, NULL, 0);
     Safefree(values);
 OUTPUT:
