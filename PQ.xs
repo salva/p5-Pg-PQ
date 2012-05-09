@@ -138,8 +138,6 @@ CODE:
 OUTPUT:
     RETVAL
 
-int PQsetClientEncoding(PGconn *conn, const char *encoding);
-
 PGVerbosity PQsetErrorVerbosity(PGconn *conn, PGVerbosity verbosity);
 
 void PQtrace(PGconn *conn, FILE *stream);
