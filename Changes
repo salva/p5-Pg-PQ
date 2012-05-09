@@ -1,6 +1,7 @@
 Revision history for Perl extension Pg::PQ.
 
-0.07
+0.07  May 9, 2012
+        - assume database encoding is UTF8
         - better handling of errorDescription and errorField
         - use Test::postgresql for testing
         - add support for payload field in notifies (bug report by
