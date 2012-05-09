@@ -54,7 +54,7 @@ make_constant(char *name, STRLEN l, U32 value, char *tag) {
             Perl_croak(aTHX_ "internal error populating EXPORT_TAGS");
         if (!SvOK(*svp) || !SvROK(*svp) || (SvTYPE(SvRV(*svp)) != SVt_PVAV))
             sv_setsv(*svp, sv_2mortal(newRV_noinc((SV*)newAV())));
-        av_push((AV*)SvRV(*svp), newSVpv(name, 0));
+        av_push((AV*)SvRV(*svp), my_newSVpv_utf8(aTHX_ name));
     }
     return sv;
 }
@@ -203,8 +203,8 @@ PPCODE:
     notice = PQnotifies(conn);
     if (notice) {
         int pid = notice->be_pid;
-        SV *name = sv_2mortal(newSVpv(notice->relname, 0));
-        SV *extra = sv_2mortal(newSVpv(notice->extra, 0));
+        SV *name = sv_2mortal(my_newSVpv_utf8(aTHX_ notice->relname));
+        SV *extra = sv_2mortal(my_newSVpv_utf8(aTHX_ notice->extra));
         PQfreemem(notice);
         EXTEND(sp, 3);
         PUSHs(name);
@@ -415,7 +415,7 @@ CODE:
     else {
         pv = PQgetvalue(res, row_number, column_number);
         if (pv)
-            RETVAL = newSVpvn(pv, PQgetlength(res, row_number, column_number));
+            RETVAL = newSVpvn_utf8(pv, PQgetlength(res, row_number, column_number), 1);
         else
             RETVAL = &PL_sv_undef;
     }
@@ -440,7 +440,7 @@ PPCODE:
             if (!PQgetisnull(res, i, j)) {
                 char *pv = PQgetvalue(res, i, j);
                 if (pv) {
-                    mPUSHs(newSVpvn(pv, PQgetlength(res, i, j)));
+                    PUSHs(newSVpvn_utf8(pv, PQgetlength(res, i, j), 1));
                     continue;
                 }
             }
@@ -467,7 +467,7 @@ PPCODE:
             if (!PQgetisnull(res, i, j)) {
                 char *pv = PQgetvalue(res, i, j);
                 if (pv) {
-                    mPUSHs(newSVpvn(pv, PQgetlength(res, i, j)));
+                    PUSHs(newSVpvn_utf8(pv, PQgetlength(res, i, j), 1));
                     continue;
                 }
             }
@@ -498,7 +498,7 @@ PPCODE:
             for (j = 0; j < cols; j++) {
                 char *pv = PQgetvalue(res, i, j);
                 if (pv)
-                    av_store(av, j, newSVpvn(pv, PQgetlength(res, i, j)));
+                    av_store(av, j, newSVpvn_utf8(pv, PQgetlength(res, i, j), 1));
                 else
                     av_store(av, j, &PL_sv_undef);
             }
@@ -529,7 +529,7 @@ PPCODE:
                 if (!PQgetisnull(res, i, j)) {
                     char *pv = PQgetvalue(res, i, j);
                     if (pv) {
-                        av_store(av, i, newSVpvn(pv, PQgetlength(res, i, j)));
+                        av_store(av, i, newSVpvn_utf8(pv, PQgetlength(res, i, j), 1));
                         continue;
                     }
                 }
@@ -567,7 +567,7 @@ CODE:
     if (!pv || !pv[0])
         RETVAL = &PL_sv_undef;
     else
-        RETVAL = newSVpv(pv, 0);
+        RETVAL = my_newSVpv_utf8(aTHX_ pv);
 OUTPUT:
     RETVAL
 
@@ -589,7 +589,7 @@ CODE:
     if (r)
         RETVAL = &PL_sv_undef;
     else {
-        RETVAL = newSVpv(buf, 0);
+        RETVAL = my_newSVpv_utf8(aTHX_ buf);
         SvUPGRADE(RETVAL, SVt_PVIV);
         SvIOK_on(RETVAL);
         SvIV_set(RETVAL, 1);

@@ -54,7 +54,7 @@ unless ($tpg) {
     plan skip_all => $Test::postgresql::errstr;
 }
 
-plan tests => 12;
+plan tests => 18;
 
 my %ci = (dbname => 'test',
           host   => '127.0.0.1',
