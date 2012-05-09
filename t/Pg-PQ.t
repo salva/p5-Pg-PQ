@@ -5,84 +5,120 @@ use 5.010;
 use strict;
 use warnings;
 
+use Test::More;
 use Pg::PQ qw(:all);
-use Data::Dumper;
 
-my ($dbr, $dbc);
-
-sub print_status {
-    # no warnings 'uninitialized';
-    printf("conn status:\t'%s' (%d),\terr:\t'%s'\nresult status:\t'%s' (%d),\tmsg:\t'%s',\terr:\t'%s'\n",
-           $dbc->status, $dbc->status, $dbc->errorMessage,
-           $dbr->status, $dbr->status, $dbr->statusMessage, $dbr->errorMessage);
+sub conn_ok {
+    my $conn = shift;
+    goto &pass if $conn->status == CONNECTION_OK;
+    diag "connection status: " . $conn->status;
+    goto &fail;
 }
 
-$dbc = Pg::PQ::Conn->new("dbname=pgpqtest");
-say $dbc->status;
-say $dbc->errorMessage;
-
-say $dbc->db;
-
-$dbr = $dbc->exec("drop table foo");
-print_status;
-
-$dbr = $dbc->exec("drop table bar");
-print_status;
-
-$dbr = $dbc->exec("create table foo (id int)");
-print_status;
-
-$dbr = $dbc->exec('insert into foo (id) values ($1)', 8378);
-print_status;
-
-$dbr = $dbc->prepare(sth1 => 'insert into foo (id) values ($1)');
-print_status;
-
-$dbr = $dbc->execPrepared(sth1 => 11);
-print_status;
-
-$dbr = $dbc->execPrepared(sth1 => 12);
-print_status;
-
-$dbr = $dbc->execPrepared(sth1 => 13);
-print_status;
-
-$dbr = $dbc->execPrepared(sth1 => 14);
-print_status;
-
-$dbr = $dbc->prepare(sth2 => 'select id, id * id from foo where id > $1 order by id');
-print_status;
-
-$dbr = $dbc->execPrepared(sth2 => 12);
-print_status;
-
-if ($dbr->status == PGRES_TUPLES_OK()) {
-    my $rows = $dbr->rows;
-    my $columns = $dbr->columns;
-    say "ntuples: ", $dbr->ntuples;
-    say "nfields: ", $dbr->nfields;
-    say "id column number: ", $dbr->fnumber("id");
-    for my $row (0 .. $dbr->nTuples - 1) {
-        for my $col (0 .. $dbr->nFields - 1) {
-            print "\t", $dbr->value($row, $col);
-        }
-        print "\n";
-    }
-
-    say "rows:";
-    for my $row (0..$rows-1) {
-        say join ", ", $dbr->row($row);
-    }
-    say "columns:";
-    for my $column (0..$columns-1) {
-        say join ", ", $dbr->column($column);
-    }
-    say "all rows:";
-    say Dumper [$dbr->rows];
-    say "all columns:";
-    say Dumper [$dbr->columns];
+sub _test_result {
+    my $res = shift;
+    my $status = shift;
+    my $rows = shift;
+    goto &pass if ($status == $res->status and
+                   ( not defined $rows or
+                     $rows == ($status == PGRES_TUPLES_OK ? $res->rows : $res->cmdRows // 0)));
+    diag sprintf("result status: %s, rows: %s, cmdRows: %s, expected: %s",
+                 $res->status,
+                 scalar($res->rows)//'<undef>',
+                 $res->cmdRows//'<undef>',
+                 $rows // '<undef>');
+    goto &fail;
 }
 
-use Test::More tests => 1;
-ok(1);
+sub command_ok {
+    my $res = shift;
+    my $n = ((defined $_[0] and $_[0] =~ /^\d+$/) ? shift : undef);
+    unshift @_, $res, PGRES_COMMAND_OK, $n;
+    goto &_test_result
+}
+
+sub tuples_ok {
+    my $res = shift;
+    my $n = ((defined $_[0] and $_[0] =~ /^\d+$/) ? shift : 1);
+    unshift @_, $res, PGRES_TUPLES_OK, $n;
+    goto &_test_result;
+}
+
+unless (eval { require Test::postgresql; 1 }) {
+    plan skip_all => "Unable to load Test::postgresql: $@";
+}
+
+my $tpg = Test::postgresql->new;
+unless ($tpg) {
+    no warnings;
+    plan skip_all => $Test::postgresql::errstr;
+}
+
+plan tests => 12;
+
+my %ci = (dbname => 'test',
+          host   => '127.0.0.1',
+          port   => $tpg->port,
+          user   => 'postgres');
+
+diag "conninfo: " . join ',', map "$_=$ci{$_}", sort keys %ci;
+
+my $conn = Pg::PQ::Conn->new(%ci);
+conn_ok($conn, "connection");
+
+my $res = $conn->exec("create table foo (id int)");
+command_ok($res, "create table foo");
+
+$res = $conn->exec('insert into foo (id) values ($1)', 8378);
+command_ok($res, 1, "insert into foo");
+
+$res = $conn->prepare(sth1 => 'insert into foo (id) values ($1)');
+command_ok($res, "prepare insert into foo");
+
+$res = $conn->execPrepared(sth1 => 11);
+command_ok($res, "insert into foo prepared 11");
+
+$res = $conn->execPrepared(sth1 => 12);
+command_ok($res, "insert into foo prepared 12");
+
+$res = $conn->execPrepared(sth1 => 13);
+command_ok($res, "insert into foo prepared 13");
+
+$res = $conn->execPrepared(sth1 => 14);
+command_ok($res, "insert into foo prepared 14");
+
+$res = $conn->prepare(sth2 => 'select id, id * id from foo where id > $1 order by id');
+command_ok($res, "prepare select");
+
+$res = $conn->execPrepared(sth2 => 12);
+tuples_ok($res, 3, "select prepared");
+
+is_deeply([$res->rows], [[13, 169], [14, 196], [8378, 70190884]], "rows");
+is_deeply([$res->columns], [[13, 14, 8378], [169, 196, 70190884]], "columns");
+
+$res = $conn->exec("listen bar");
+command_ok($res, "listen bar");
+
+my $conn2 = Pg::PQ::Conn->new(%ci);
+conn_ok($conn2, "conn2 connected");
+
+$res = $conn2->exec("notify bar");
+
+my ($name, $pid);
+for (1..10) {
+    $conn->consumeInput or last;
+    if (($name, $pid) = $conn->notifies) {
+        diag "notification received on iteration $_";
+        last;
+    }
+    select undef, undef, undef, 0.25;
+}
+
+conn_ok($conn, "conn ok");
+conn_ok($conn2, "conn2 ok");
+is ($name, 'bar', "notification name");
+is ($pid, $conn2->backendPID, "notification PID");
+
+$conn2->finish;
+$conn->finish;
 
