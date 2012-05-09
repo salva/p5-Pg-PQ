@@ -1,6 +1,6 @@
 package Pg::PQ;
 
-our $VERSION = '0.06';
+our $VERSION = '0.07';
 
 use 5.010001;
 use strict;

@@ -1,5 +1,11 @@
 Revision history for Perl extension Pg::PQ.
 
+0.07
+        - better handling of errorDescription and errorField
+        - use Test::postgresql for testing
+        - add support for payload field in notifies (bug report by
+          Mischa Spiegelmock)
+
 0.06  Jan 3, 2012
         - allow compilation with older versions of libpq
         - OUTPUT directive was missing from PQcmdTuples wrapper
