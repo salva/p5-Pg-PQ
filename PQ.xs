@@ -76,7 +76,16 @@ PROTOTYPES: DISABLE
 BOOT:
     init_constants();
 
-
+char *
+PQlibVersion()
+CODE:
+#if PQMAJOR >= 9
+    RETVAL = PQlibVersion();
+#else
+    RETVAL = PQVERSION;
+#endif
+OUTPUT:
+    RETVAL
 
 MODULE = Pg::PQ		PACKAGE = Pg::PQ::Conn          PREFIX=PQ
 
@@ -220,8 +229,6 @@ PPCODE:
 PGresult *PQmakeEmptyPGresult(PGconn *conn, ExecStatusType status);
 ALIAS:
     PQmakeEmptyResult = 0
-
-# size_t PQescapeStringConn (PGconn *conn, char *to, const char *from, size_t length, int *error);
 
 SV *PQescapeString(PGconn *conn, SV *from)
 PREINIT:
