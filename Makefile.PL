@@ -1,7 +1,7 @@
 
 use ExtUtils::MakeMaker;
 
-`pg_config --version 2>&1` =~ /PostgreSQL\s+(\d+)\.(\d+\.\d+)/i;
+`pg_config --version 2>&1` =~ /PostgreSQL\s+(\d+)\.(\d+(?:\.\d+|\w+))\b/i;
 unless (defined $1 and $1 >= 8) {
     die "libpq 8.x.x or later required (".(defined $1 ? "$1.$2" : 'none')." found)\n";
 }
