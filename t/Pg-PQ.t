@@ -11,7 +11,7 @@ use Pg::PQ qw(:all);
 sub conn_ok {
     my $conn = shift;
     goto &pass if $conn->status == CONNECTION_OK;
-    diag "connection status: " . $conn->status;
+    diag sprintf "connection status: %s (%s)", $conn->status, $conn->errorMessage;
     goto &fail;
 }
 
@@ -61,7 +61,7 @@ my %ci = (dbname => 'test',
           port   => $tpg->port,
           user   => 'postgres');
 
-diag "conninfo: " . join ',', map "$_=$ci{$_}", sort keys %ci;
+diag "conninfo: " . Pg::PQ::Conn::_make_conninfo(%ci);
 
 my $conn = Pg::PQ::Conn->new(%ci);
 conn_ok($conn, "connection");
