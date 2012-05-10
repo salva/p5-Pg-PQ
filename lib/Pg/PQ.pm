@@ -30,8 +30,8 @@ sub _make_conninfo {
     if (@_ == 1 and ref $_[0] eq 'HASH') {
         %opts = %{$_[0]}
     }
-    else {
-        $conninfo[0] = shift @_ if @_ & 1;
+    elsif (@_ & 1) {
+        $conninfo[0] = shift @_;
         $conninfo[0] = "dbname=$conninfo[0]" unless $conninfo[0] =~ /=/;
         %opts = @_;
     }
