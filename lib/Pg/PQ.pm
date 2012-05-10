@@ -30,13 +30,16 @@ sub _make_conninfo {
     if (@_ == 1 and ref $_[0] eq 'HASH') {
         %opts = %{$_[0]}
     }
-    elsif (@_ & 1) {
-        $conninfo[0] = shift @_;
-        $conninfo[0] = "dbname=$conninfo[0]" unless $conninfo[0] =~ /=/;
+    else {
+        if (@_ & 1) {
+            $conninfo[0] = shift @_;
+            $conninfo[0] = "dbname=$conninfo[0]" unless $conninfo[0] =~ /=/;
+        }
         %opts = @_;
     }
     push @conninfo, map _escape_opt($_).'='._escape_opt($opts{$_}), keys %opts;
-    push @conninfo, 'client_encoding=UTF8';
+    no warnings 'numeric';
+    push @conninfo, 'client_encoding=UTF8' if Pg::PQ::libVersion() >= 9;
     # warn "conninfo: >@conninfo<\n";
     join ' ', @conninfo;
 }
