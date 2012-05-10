@@ -1406,6 +1406,16 @@ X<pgres_polling>
 
 =back
 
+=head2 Miscellaneous subs
+
+=over 4
+
+=item $ver = Pg::PQ::libVersion()
+
+Returns the version of the libpq library used to compile this module.
+
+=back
+
 =head2 Non-blocking database access
 
 =head3 Non-blocking connecting to the database
