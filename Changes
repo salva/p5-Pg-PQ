@@ -1,5 +1,11 @@
 Revision history for Perl extension Pg::PQ.
 
+0.08  May 10, 2012
+        - wrap libVersion
+        - set client_encoding to UTF8 on new connections
+        - allow compiling against development versions of PostgreSQL
+          (bug report by erix@perlmonks)
+
 0.07  May 9, 2012
         - assume database encoding is UTF8
         - better handling of errorDescription and errorField
