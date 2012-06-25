@@ -79,8 +79,10 @@ BOOT:
 char *
 PQlibVersion()
 CODE:
-#if PQMAJOR >= 9
-    RETVAL = PQlibVersion();
+#if (0 && (PQMAJOR >= 9))
+    RETVAL = PQlibVersion(); /* this returns an integer, use the
+                              * value obtained from pg_config at
+                              * compilation instead */
 #else
     RETVAL = PQVERSION;
 #endif
