@@ -1,5 +1,8 @@
 Revision history for Perl extension Pg::PQ.
 
+0.09
+        - nonBlocking() was broken
+
 0.08  May 10, 2012
         - wrap libVersion
         - set client_encoding to UTF8 on new connections
