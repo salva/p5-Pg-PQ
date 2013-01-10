@@ -325,6 +325,8 @@ CODE:
     if (SvOK(nb))
         PQsetnonblocking(conn, SvIV(nb));
     RETVAL = PQisnonblocking(conn);
+OUTPUT:
+    RETVAL
 
 int PQflush(PGconn *conn);
 
