@@ -25,7 +25,7 @@ WriteMakefile( NAME          => 'Pg::PQ',
                PREREQ_PM     => \%prereq_pm,
                ABSTRACT_FROM => 'lib/Pg/PQ.pm',
                AUTHOR        => 'Salvador Fandino <sfandino@yahoo.com>',
-               LIBS          => ["-lpq -L$libdir"],
+               LIBS          => ["-L$libdir -lpq"],
                DEFINE        => qq(-DPQMAJOR=$major -DPQVERSION='"$version"'), # e.g., '-DHAVE_SOMETHING'
                INC           => "-I. -I$incdir",
                # OBJECT        => '$(O_FILES)', # link all the C files too
