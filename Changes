@@ -1,7 +1,13 @@
 Revision history for Perl extension Pg::PQ.
 
-0.09
+0.10  Feb 1, 2012
+        - Makefile.PL LD parameters where in the wrong order (bug
+          report and solution by Geoffrey D. Bennett).
         - nonBlocking() was broken
+
+0.09  Jul 2, 2012
+        - return libpq version as obtained from pg_config instead of
+          from libVersion
 
 0.08  May 10, 2012
         - wrap libVersion

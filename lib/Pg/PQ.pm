@@ -1,7 +1,7 @@
 
 package Pg::PQ;
 
-our $VERSION = '0.09';
+our $VERSION = '0.10';
 
 use 5.010001;
 use strict;
@@ -1692,7 +1692,7 @@ Salvador FandiE<ntilde>o E<lt>sfandino@yahoo.comE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2011-2012 by Qindel FormaciE<oacute>n y Servicios S.L.
+Copyright (C) 2011-2013 by Qindel FormaciE<oacute>n y Servicios S.L.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself, either Perl version 5.10.1 or,
