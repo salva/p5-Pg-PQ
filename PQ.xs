@@ -377,6 +377,27 @@ char *PQfname(PGresult *res, int column_number)
 ALIAS:
     columnName = 0
 
+void
+PQfnames(PGresult *res)
+ALIAS:
+    columnNames = 0
+PREINIT:
+    int cols;
+PPCODE:
+    cols = PQnfields(res);
+    if (cols) {
+        int j;
+        if (GIMME_V != G_ARRAY) cols = 1;
+        EXTEND(sp, cols);
+        for (j = 0; j < cols; j++) {
+            char *pv = PQfname(res, j);
+            SV *sv = newSVpvn_utf8(pv, strlen(pv), 1);
+            mPUSHs(sv);            
+        }
+    }
+    XSRETURN(cols);
+
+
 int PQfnumber(PGresult *res, const char *column_name)
 ALIAS:
     columnNumber = 0
@@ -459,6 +480,41 @@ PPCODE:
     }
 
 void
+PQgettuple_as_hash(PGresult *res, UV i = 0)
+ALIAS:
+    rowAsHash = 0
+PREINIT:
+    int rows, cols;
+PPCODE:
+    rows = PQntuples(res);
+    cols = PQnfields(res);
+    if ((i > rows) || !cols)
+        XSRETURN(0);
+    else {
+        int j;
+        HV *hv = newHV();
+        SV *rv = newRV_noinc((SV*)hv);
+        SV *tmp = (items > 2 ? sv_newmortal() : NULL);
+        for (j = 0; j < cols; j++) {
+            SV *key;
+            SV *val = ( PQgetisnull(res, i, j) 
+                        ? &PL_sv_undef
+                        : newSVpvn_utf8(PQgetvalue(res, i, j), PQgetlength(res, i, j), 1));
+            if ((items - 2 > j) && SvOK(ST(j - 2))) {
+                key = tmp;
+                sv_setpv(key, PQfname(res, j));
+                SvUTF8_on(key);
+            }
+            else {
+                key = ST(j + 2);
+            }
+            hv_store_ent(hv, key, val, 0);
+        }
+        mPUSHs(rv);
+        XSRETURN(1);
+    }
+
+void
 PQgetcolumn(PGresult *res, int j = 0)
 ALIAS:
     column = 0
@@ -505,15 +561,55 @@ PPCODE:
             mPUSHs(newRV_noinc((SV*)av));
             if (cols) av_extend(av, cols - 1);
             for (j = 0; j < cols; j++) {
-                char *pv = PQgetvalue(res, i, j);
-                if (pv)
-                    av_store(av, j, newSVpvn_utf8(pv, PQgetlength(res, i, j), 1));
-                else
-                    av_store(av, j, &PL_sv_undef);
+                SV *val = ( PQgetisnull(res, i, j)
+                            ? &PL_sv_undef
+                            : newSVpvn_utf8(PQgetvalue(res, i, j), PQgetlength(res, i, j), 1) );
+                av_store(av, j, val);
             }
         }
         XSRETURN(rows);
     }
+
+void
+PQgettuples_as_hash(PGresult *res)
+ALIAS:
+    rowsAsHashes = 0
+PREINIT:
+    int rows, cols, i, j;
+PPCODE:
+    rows = PQntuples(res);
+    cols = PQnfields(res);
+    if (GIMME_V != G_ARRAY) {
+        mPUSHi(cols);
+        XSRETURN(1);
+    }
+    else {
+        SV **names;
+        Newx(names, cols, SV *);
+        EXTEND(SP, rows);
+        for (j = 0; j < cols; j++) {
+            if (items - 1 > j) {
+                names[j] = ST(j - 1);
+            }
+            else {
+                names[j] = sv_2mortal(newSVpv(PQfname(res, j), 0));
+                SvUTF8_on(names[j]);
+            }
+        }
+        for (i = 0; i < rows; i++) {
+            HV *hv = newHV();
+            for (j = 0; j < rows; j++) {
+                SV *val = ( PQgetisnull(res, i, j)
+                            ? &PL_sv_undef
+                            : newSVpvn_utf8(PQgetvalue(res, i, j), PQgetlength(res, i, j), 1) );
+                hv_store_ent(hv, names[j], val, 0);
+            }
+            mPUSHs(newRV_noinc((SV*)hv));
+        }
+        Safefree(names);
+        XSRETURN(rows);
+    }
+
 
 void
 PQgetcolumns(PGresult *res)

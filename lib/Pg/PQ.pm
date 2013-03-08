@@ -1214,6 +1214,10 @@ Returns the number of columns in the query result.
 Returns the column name associated with the given column
 number. Column numbers start at 0.
 
+=item @names = $res->columnNames
+
+Returns a list with the response column names.
+
 =item $n = $res->columnNumber($column_name)
 
 Returns the column number associated with the given column name.
@@ -1269,6 +1273,15 @@ at 0.
 
 Returns a list of the fields in the indicated row.
 
+=item $h = $res->rowAsHash($index)
+
+=item $h = $res->rowAsHash($index, @field_names)
+
+Returns the row as a hash.
+
+The field names to be used as the hash keys can be given, otherwise they
+are extracted from the result object.
+
 =item @fields = $res->column($index)
 
 Return a list of the fields in the indicated column.
@@ -1281,6 +1294,13 @@ In scalar context this method returns the number of rows in the result set.
 
 In list context it return a list of arrays containing the values on
 every row of the result set.
+
+=item @hashes = $res->rowsAsHashes
+
+=item @hashes = $res->rowsAsHashes(@field_names)
+
+Returns a list of hashes with the result values (see also
+C<rowAsHash>).
 
 =item $nColumns = $res->columns
 
