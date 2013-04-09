@@ -480,12 +480,13 @@ PPCODE:
     }
 
 void
-PQgettuple_as_hash(PGresult *res, UV i = 0)
+PQgettuple_as_hash(PGresult *res, ...)
 ALIAS:
     rowAsHash = 0
 PREINIT:
-    int rows, cols;
+    int i, rows, cols;
 PPCODE:
+    i = (items > 1 ? SvIV(ST(1)) : 0);
     rows = PQntuples(res);
     cols = PQnfields(res);
     if ((i > rows) || !cols)
@@ -494,20 +495,22 @@ PPCODE:
         int j;
         HV *hv = newHV();
         SV *rv = newRV_noinc((SV*)hv);
-        SV *tmp = (items > 2 ? sv_newmortal() : NULL);
+        SV *tmp = NULL;
         for (j = 0; j < cols; j++) {
             SV *key;
             SV *val = ( PQgetisnull(res, i, j) 
                         ? &PL_sv_undef
                         : newSVpvn_utf8(PQgetvalue(res, i, j), PQgetlength(res, i, j), 1));
-            if ((items - 2 > j) && SvOK(ST(j - 2))) {
+            if ((items > j + 2) && SvOK(ST(j + 2))) {
+                key = ST(j + 2);
+            }
+            else {
+                if (!tmp) tmp = sv_newmortal();
                 key = tmp;
                 sv_setpv(key, PQfname(res, j));
                 SvUTF8_on(key);
             }
-            else {
-                key = ST(j + 2);
-            }
+            /*fprintf(stderr, "*>> hv_store_ent(0x%p, %s, %s)\n", hv, SvPV_nolen(key), SvPV_nolen(val));*/
             hv_store_ent(hv, key, val, 0);
         }
         mPUSHs(rv);

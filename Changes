@@ -1,5 +1,8 @@
 Revision history for Perl extension Pg::PQ.
 
+0.11  Apr 9, 2012
+        - add support for rowAsHash and rowsAsHashes methods
+
 0.10  Feb 1, 2012
         - Makefile.PL LIB parameters were in the wrong order (bug
           report and solution by Geoffrey D. Bennett).
