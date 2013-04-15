@@ -601,7 +601,7 @@ PPCODE:
         }
         for (i = 0; i < rows; i++) {
             HV *hv = newHV();
-            for (j = 0; j < rows; j++) {
+            for (j = 0; j < cols; j++) {
                 SV *val = ( PQgetisnull(res, i, j)
                             ? &PL_sv_undef
                             : newSVpvn_utf8(PQgetvalue(res, i, j), PQgetlength(res, i, j), 1) );
