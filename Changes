@@ -1,5 +1,9 @@
 Revision history for Perl extension Pg::PQ.
 
+0.12
+        - fix error in rowsAsHashes that could result in segmentation
+          fault in some cases
+
 0.11  Apr 9, 2012
         - add support for rowAsHash and rowsAsHashes methods
 
