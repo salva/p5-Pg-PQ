@@ -99,17 +99,16 @@ PREINIT:
 PPCODE:
     opts = PQconndefaults();
     if (opts) {
-        int i;
-        for (i = 0; opts[i].keyword; i++) {
+        for (; opts[n].keyword; n++) {
             HV *hv = newHV();
             XPUSHs(newRV_noinc((SV*)hv));
-            hv_stores(hv, "keyword" , newSVpv(opts[i].keyword , 0));
-            hv_stores(hv, "envvar"  , newSVpv(opts[i].envvar  , 0));
-            hv_stores(hv, "compiled", newSVpv(opts[i].compiled, 0));
-            hv_stores(hv, "value"   , newSVpv(opts[i].val     , 0));
-            hv_stores(hv, "label"   , newSVpv(opts[i].label   , 0));
-            hv_stores(hv, "dispchar", newSVpv(opts[i].dispchar, 0));
-            hv_stores(hv, "dispsize", newSViv(opts[i].dispsize));
+            hv_stores(hv, "keyword" , newSVpv(opts[n].keyword , 0));
+            hv_stores(hv, "envvar"  , newSVpv(opts[n].envvar  , 0));
+            hv_stores(hv, "compiled", newSVpv(opts[n].compiled, 0));
+            hv_stores(hv, "value"   , newSVpv(opts[n].val     , 0));
+            hv_stores(hv, "label"   , newSVpv(opts[n].label   , 0));
+            hv_stores(hv, "dispchar", newSVpv(opts[n].dispchar, 0));
+            hv_stores(hv, "dispsize", newSViv(opts[n].dispsize));
         }
         PQconninfoFree(opts);
     }

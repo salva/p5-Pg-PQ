@@ -155,6 +155,10 @@ These are the methods available from the class Pg::PQ::Conn:
 
 =over 4
 
+=item @defaults = Pg::PQ::Conn::defaults();
+
+Returns a list of hashes describing the acceptable connection options.
+
 =item $dbc = Pg::PQ::Conn->new($conninfo)
 
 =item $dbc = Pg::PQ::Conn->new(%conninfo)
