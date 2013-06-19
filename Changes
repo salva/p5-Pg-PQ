@@ -1,5 +1,9 @@
 Revision history for Perl extension Pg::PQ.
 
+0.13
+        - wrap PQconndefaults
+        - fix POD errors
+
 0.12  Apr 16, 2013
         - fix error in rowsAsHashes that could result in segmentation
           fault in some cases

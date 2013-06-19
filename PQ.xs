@@ -91,6 +91,30 @@ OUTPUT:
 
 MODULE = Pg::PQ		PACKAGE = Pg::PQ::Conn          PREFIX=PQ
 
+void
+PQdefaults(...)
+PREINIT:
+    PQconninfoOption *opts;
+    int n = 0;
+PPCODE:
+    opts = PQconndefaults();
+    if (opts) {
+        int i;
+        for (i = 0; opts[i].keyword; i++) {
+            HV *hv = newHV();
+            XPUSHs(newRV_noinc((SV*)hv));
+            hv_stores(hv, "keyword" , newSVpv(opts[i].keyword , 0));
+            hv_stores(hv, "envvar"  , newSVpv(opts[i].envvar  , 0));
+            hv_stores(hv, "compiled", newSVpv(opts[i].compiled, 0));
+            hv_stores(hv, "value"   , newSVpv(opts[i].val     , 0));
+            hv_stores(hv, "label"   , newSVpv(opts[i].label   , 0));
+            hv_stores(hv, "dispchar", newSVpv(opts[i].dispchar, 0));
+            hv_stores(hv, "dispsize", newSViv(opts[i].dispsize));
+        }
+        PQconninfoFree(opts);
+    }
+    XSRETURN(n);
+
 PGconn *PQconnectdb(const char *conninfo);
 
 PGconn *PQconnectStart(char *conninfo)
