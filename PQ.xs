@@ -522,7 +522,7 @@ PPCODE:
         for (j = 0; j < cols; j++) {
             SV *key;
             SV *val = ( PQgetisnull(res, i, j) 
-                        ? &PL_sv_undef
+                        ? newSV(0)
                         : newSVpvn_utf8(PQgetvalue(res, i, j), PQgetlength(res, i, j), 1));
             if ((items > j + 2) && SvOK(ST(j + 2))) {
                 key = ST(j + 2);
@@ -597,7 +597,7 @@ PPCODE:
     }
 
 void
-PQgettuples_as_hash(PGresult *res)
+PQgettuples_as_hashes(PGresult *res)
 ALIAS:
     rowsAsHashes = 0
 PREINIT:
@@ -626,7 +626,7 @@ PPCODE:
             HV *hv = newHV();
             for (j = 0; j < cols; j++) {
                 SV *val = ( PQgetisnull(res, i, j)
-                            ? &PL_sv_undef
+                            ? newSV(0)
                             : newSVpvn_utf8(PQgetvalue(res, i, j), PQgetlength(res, i, j), 1) );
                 hv_store_ent(hv, names[j], val, 0);
             }

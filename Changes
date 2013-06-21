@@ -1,6 +1,9 @@
 Revision history for Perl extension Pg::PQ.
 
-0.13
+0.13  Jun 21, 2013
+        - rowAsHash and rowsAsHashes were handling NULL values
+          incorrectly, resulting in "Modification of non-creatable
+          hash value attempted" errors
         - wrap PQconndefaults
         - fix POD errors
 
