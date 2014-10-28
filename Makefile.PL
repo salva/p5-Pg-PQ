@@ -18,7 +18,7 @@ my $libdir = `pg_config --libdir`;
 chomp($incdir, $libdir);
 
 my %prereq_pm;
-$prereq_pm{'Test::postgresql'} = '0.09' if $ENV{AUTOMATED_TESTING};
+$prereq_pm{'Test::PostgreSQL'} = '1.05' if $ENV{AUTOMATED_TESTING};
 
 WriteMakefile( NAME          => 'Pg::PQ',
                VERSION_FROM  => 'lib/Pg/PQ.pm',

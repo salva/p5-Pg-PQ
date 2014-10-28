@@ -44,14 +44,14 @@ sub tuples_ok {
     goto &_test_result;
 }
 
-unless (eval { require Test::postgresql; 1 }) {
-    plan skip_all => "Unable to load Test::postgresql: $@";
+unless (eval { require Test::PostgreSQL; 1 }) {
+    plan skip_all => "Unable to load Test::PostgreSQL: $@";
 }
 
-my $tpg = Test::postgresql->new;
+my $tpg = Test::PostgreSQL->new;
 unless ($tpg) {
     no warnings;
-    plan skip_all => $Test::postgresql::errstr;
+    plan skip_all => $Test::PostgreSQL::errstr;
 }
 
 plan tests => 18;
