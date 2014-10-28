@@ -1,5 +1,8 @@
 Revision history for Perl extension Pg::PQ.
 
+0.14  Oct 28, 2014
+        - use Test::PostgreSQL for testing
+
 0.13  Jun 21, 2013
         - rowAsHash and rowsAsHashes were handling NULL values
           incorrectly, resulting in "Modification of non-creatable
