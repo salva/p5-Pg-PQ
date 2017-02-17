@@ -36,7 +36,7 @@ sub _make_conninfo {
         }
         %opts = @_;
     }
-    push @conninfo, map _escape_opt($_).'='._escape_opt($opts{$_}), keys %opts;
+    push @conninfo, map _escape_opt($_).'='._escape_opt($opts{$_}), grep defined $opts{$_} && $opts{$_} ne '', keys %opts;
     no warnings 'numeric';
     push @conninfo, 'client_encoding=UTF8' if Pg::PQ::libVersion() >= 9;
     # warn "conninfo: >@conninfo<\n";
